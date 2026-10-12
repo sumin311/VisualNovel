@@ -37,10 +37,10 @@ namespace VN
         [Tooltip("새로 시작을 누르면 고를 수 있는 모드들")]
         public VNGameMode[] modes =
         {
-            new VNGameMode("승주를 꼬시기", "'나'가 되어, 말수 적은 승주의 마음을 얻어 보자.", "start"),
+            new VNGameMode("승주를 꼬시기", "'나'가 되어, 도도한 공주님 승주의 마음을 얻어 보자.", "start"),
             new VNGameMode("승주가 되기", "승주가 되어 보자. 친구 넷이 전부 나를 노린다?!", "harem_start"),
         };
-        [Tooltip("비워두면 파일 처음부터. 테스트할 때 특정 라벨부터 시작하려면 입력 (모든 모드에 적용)")]
+        [Tooltip("테스트용 시작 위치. 비워두면 처음부터. 라벨 이름 / 파일 이름(day4) / 파일:라벨(day4:수민) 가능")]
         public string startLabel = "";
         [Tooltip("타이틀 화면 BGM (Assets/Resources/Audio/BGM/). 비워두면 재생 안 함")]
         public string titleBgm = "";
@@ -251,13 +251,46 @@ namespace VN
             modeIndex = mode;
 
             int start = 0;
-            if (!string.IsNullOrEmpty(startLabel) && !s.labels.TryGetValue(startLabel, out start))
+            if (!string.IsNullOrEmpty(startLabel) && (startLabel.Contains(":") || !s.labels.TryGetValue(startLabel, out start)))
             {
-                Debug.LogWarning($"[VN] 시작 라벨 '{startLabel}'을(를) {startScript}.txt 에서 찾을 수 없어 처음부터 시작합니다.");
+                // 테스트용: "day4" 또는 "day4:라벨" 처럼 다른 파일에서 시작
                 start = 0;
+                int colon = startLabel.IndexOf(':');
+                string file = colon >= 0 ? startLabel.Substring(0, colon).Trim() : startLabel.Trim();
+                string label = colon >= 0 ? startLabel.Substring(colon + 1).Trim() : null;
+                var t = Resources.Load<TextAsset>(VNScript.Folder + file) != null ? VNScript.Load(file) : null;
+                if (t == null)
+                    Debug.LogWarning($"[VN] 테스트 시작 위치 '{startLabel}'을(를) 찾을 수 없어 처음부터 시작합니다.");
+                else if (!string.IsNullOrEmpty(label) && !t.labels.TryGetValue(label, out start))
+                    Debug.LogWarning($"[VN] {file}.txt 에 라벨 '{label}'이(가) 없어 그 파일 처음부터 시작합니다.");
+                if (t != null)
+                {
+                    ApplyStartDefaults(s);
+                    hud.SetVisible(true); // @hud on 은 보통 1일차에 있어서 건너뛰면 빠지므로
+                    s = t;
+                }
             }
             EnterGame();
             runner = StartCoroutine(Run(s, start));
+        }
+
+        /// <summary>
+        /// 테스트 시작 위치로 건너뛸 때, 모드 첫 파일의 @gauge 와 각 변수의 첫 @set 만 미리 적용
+        /// (예: 호감도 시작값 20, 게이지 4개). 선택지/대사는 건너뜀
+        /// </summary>
+        void ApplyStartDefaults(VNScript s)
+        {
+            var seen = new HashSet<string>();
+            foreach (var l in s.lines)
+            {
+                if (l.type != VNLineType.Command) continue;
+                if (l.command == "gauge") hud.SetGauges(l.args);
+                else if (l.command == "set")
+                {
+                    var m = setRegex.Match(string.Join(" ", l.args));
+                    if (m.Success && seen.Add(m.Groups[1].Value)) DoSet(l);
+                }
+            }
         }
 
         public void ReturnToTitle()
