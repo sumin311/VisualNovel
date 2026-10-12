@@ -33,8 +33,8 @@ namespace VN
         readonly List<GameObject> spawned = new List<GameObject>();
         bool cgTab = true;
 
-        static readonly Color TabOn = new Color(1f, 0.56f, 0.72f);
-        static readonly Color TabOff = new Color(0.7f, 0.7f, 0.78f);
+        static readonly Color TabOn = new Color(0.88f, 0.38f, 0.56f);
+        static readonly Color TabOff = new Color(0.55f, 0.44f, 0.41f);
 
         void Awake()
         {
@@ -115,7 +115,7 @@ namespace VN
                 var row = Instantiate(endingRowTemplate, endingContainer);
                 row.gameObject.SetActive(true);
                 spawned.Add(row.gameObject);
-                row.text = open ? "♥  " + e : "<color=#77778a>?  아직 못 본 엔딩</color>";
+                row.text = open ? "<color=#E0628F>♥</color>  " + e : "<color=#B8A39B>?  아직 못 본 엔딩</color>";
             }
             countText.text = $"엔딩  {unlocked} / {all.Count}";
         }

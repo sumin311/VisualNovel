@@ -109,6 +109,8 @@ namespace VN
                     single = new Gauge { nameText = nameText, fill = gaugeFill, valueText = valueText, stageText = stageText, deltaText = deltaText };
                 single.name = names[0];
                 single.variable = names[0] + variableSuffix;
+                Color sc = VNScript.GetNameColor(names[0]);
+                if (sc != Color.white) { nameText.color = sc; gaugeFill.color = sc; }
                 gauges.Add(single);
             }
 

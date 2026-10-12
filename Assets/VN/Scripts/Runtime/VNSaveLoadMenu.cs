@@ -7,6 +7,9 @@ namespace VN
     public class VNSaveLoadMenu : MonoBehaviour
     {
         public Text headerText;
+        [Tooltip("제목 아래 설명 문구")]
+        public Text descText;
+        public VNMenuTabs tabs;
         public RectTransform slotContainer;
         public Button slotTemplate;
         public Button closeButton;
@@ -24,6 +27,8 @@ namespace VN
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
             headerText.text = save ? "저장하기" : "불러오기";
+            if (descText != null) descText.text = save ? "지금까지의 이야기를 저장합니다." : "저장해 둔 이야기를 이어서 합니다.";
+            if (tabs != null) tabs.Highlight(save ? VNMenuKind.Save : VNMenuKind.Load);
             Refresh();
         }
 
@@ -40,8 +45,8 @@ namespace VN
                 b.gameObject.SetActive(true);
                 var data = VNSaveSystem.Load(slot);
                 b.GetComponentInChildren<Text>().text = data == null
-                    ? $"<b>No.{slot}</b>\n<color=#8a8aa0>- 비어 있음 -</color>"
-                    : $"<b>No.{slot}</b>    <color=#b8b8cc>{data.savedAt}</color>{(string.IsNullOrEmpty(data.modeName) ? "" : $"    <color=#ff8fb8>{data.modeName}</color>")}\n{Shorten(data.preview, 34)}";
+                    ? $"<b>No.{slot}</b>\n<color=#B8A39B>- 비어 있음 -</color>"
+                    : $"<b>No.{slot}</b>    <color=#9A8079>{data.savedAt}</color>{(string.IsNullOrEmpty(data.modeName) ? "" : $"    <color=#E0628F>{data.modeName}</color>")}\n{Shorten(data.preview, 34)}";
                 b.interactable = saveMode || data != null;
                 int s = slot;
                 bool exists = data != null;

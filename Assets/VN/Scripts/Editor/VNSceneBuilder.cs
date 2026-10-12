@@ -10,25 +10,34 @@ namespace VN.EditorTools
     /// <summary>
     /// VN > 메인 씬 다시 생성 : 게임에 필요한 UI 전체를 Assets/Scenes/Main.unity 로 만들어 줍니다.
     /// 만들어진 뒤에는 씬에서 위치/색/크기를 자유롭게 수정해도 됩니다.
+    /// 디자인: 파스텔 미연시 풍 — 크림색 창, 흰 둥근 버튼(마우스 올리면 분홍), 왼쪽 아이콘 탭, 둥근 X 닫기
     /// </summary>
     [InitializeOnLoad]
     public static class VNSceneBuilder
     {
         public const string ScenePath = "Assets/Scenes/Main.unity";
-        const string RoundSpritePath = "Assets/VN/UI/round.png";
+        const string UIDir = "Assets/VN/UI/";
 
-        // 테마 색상
-        static readonly Color PanelColor = new Color(0.06f, 0.06f, 0.11f, 0.86f);
-        static readonly Color WindowColor = new Color(0.09f, 0.09f, 0.15f, 0.97f);
-        static readonly Color Accent = new Color(1f, 0.56f, 0.72f, 1f);
-        static readonly Color AccentDark = new Color(0.82f, 0.38f, 0.55f, 1f);
-        static readonly Color ButtonColor = new Color(0.16f, 0.16f, 0.25f, 0.95f);
-        static readonly Color SlotColor = new Color(0.14f, 0.14f, 0.22f, 1f);
-        static readonly Color TextColor = new Color(0.96f, 0.96f, 0.98f, 1f);
-        static readonly Color DimColor = new Color(0f, 0f, 0f, 0.65f);
+        // ───────── 팔레트 (큰 그라데이션 없이 단색만) ─────────
+        static readonly Color Cream = Hex("FFF9F5");
+        static readonly Color Inner = Hex("F5EAE3");
+        static readonly Color CardWhite = Color.white;
+        static readonly Color Brown = Hex("4A2C2A");
+        static readonly Color BrownSoft = Hex("8C6F68");
+        static readonly Color Muted = Hex("B8A39B");
+        static readonly Color Pink = Hex("F27BA3");
+        static readonly Color PinkDeep = Hex("E0628F");
+        static readonly Color PinkSoft = Hex("FFE6EF");
+        static readonly Color Lavender = Hex("B9A7E8");
+        static readonly Color LavenderDeep = Hex("7A64B4");
+        static readonly Color Track = Hex("EEDDD5");
+        static readonly Color TitleBg = Hex("FBE7EC");
+        static readonly Color DimColor = new Color(0.22f, 0.12f, 0.14f, 0.45f);
+        static readonly Color ShadowColor = new Color(0.35f, 0.18f, 0.2f, 0.16f);
 
         static Font font;
-        static Sprite round, knob, check;
+        static Sprite pill, pillLine, arrow, heart, sparkle, xmark;
+        static Sprite iconSettings, iconImage, iconFolder, iconLog;
 
         static VNSceneBuilder()
         {
@@ -165,61 +174,71 @@ namespace VN.EditorTools
             catcher.navigation = new Navigation { mode = Navigation.Mode.None };
             engine.clickCatcher = catcher;
 
-            // 대사창
+            // 대사창 — 크림색 둥근 창 + 안쪽 분홍 테두리
             var boxRt = Child("DialogueBox", gameUI);
             boxRt.anchorMin = new Vector2(0, 0);
             boxRt.anchorMax = new Vector2(1, 0);
             boxRt.pivot = new Vector2(0.5f, 0);
-            boxRt.offsetMin = new Vector2(80, 36);
-            boxRt.offsetMax = new Vector2(-80, 316);
+            boxRt.offsetMin = new Vector2(90, 34);
+            boxRt.offsetMax = new Vector2(-90, 300);
             var box = boxRt.gameObject.AddComponent<VNDialogueBox>();
             box.canvasGroup = boxRt.gameObject.AddComponent<CanvasGroup>();
+            box.toggleOnColor = PinkDeep;
+            box.toggleOffColor = Brown;
+            box.darkText = Brown;
+            box.defaultPlateColor = BrownSoft;
             engine.dialogue = box;
 
-            var panel = Img(Child("Panel", boxRt), PanelColor, round);
+            var panel = Rounded(Child("Panel", boxRt), new Color(1f, 0.98f, 0.97f, 0.95f), 30);
             Stretch(panel.rectTransform);
-            var outline = panel.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(Accent.r, Accent.g, Accent.b, 0.35f);
-            outline.effectDistance = new Vector2(2, -2);
+            AddDropShadow(panel);
+            var frame = Ring(Child("Frame", boxRt), new Color(Pink.r, Pink.g, Pink.b, 0.45f), 22);
+            Stretch(frame.rectTransform, 10, 10, 10, 10);
 
-            // 이름표 (글자 길이에 맞게 늘어남)
+            // 이름표 = 캐릭터 색 알약 + 흰 테두리 (글자 길이에 맞게 늘어남)
             var plate = Child("NamePlate", boxRt);
             plate.anchorMin = plate.anchorMax = new Vector2(0, 1);
             plate.pivot = new Vector2(0, 0.5f);
-            plate.anchoredPosition = new Vector2(48, 4);
-            plate.sizeDelta = new Vector2(260, 64);
-            Img(plate, new Color(0.13f, 0.12f, 0.2f, 1f), round);
-            var plateOutline = plate.gameObject.AddComponent<Outline>();
-            plateOutline.effectColor = Accent;
-            plateOutline.effectDistance = new Vector2(2, -2);
+            plate.anchoredPosition = new Vector2(48, 0);
+            plate.sizeDelta = new Vector2(220, 62);
+            box.namePlateImage = Pill(plate, Pink, 62);
+            AddDropShadow(box.namePlateImage);
+            var plateRing = Pill(Child("Ring", plate), Color.white, 62, true);
+            Stretch(plateRing.rectTransform);
+            plateRing.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             var hl = plate.gameObject.AddComponent<HorizontalLayoutGroup>();
-            hl.padding = new RectOffset(40, 40, 4, 4);
+            hl.padding = new RectOffset(46, 46, 4, 4);
             hl.childAlignment = TextAnchor.MiddleCenter;
             hl.childControlWidth = hl.childControlHeight = true;
             hl.childForceExpandWidth = hl.childForceExpandHeight = true;
             var csf = plate.gameObject.AddComponent<ContentSizeFitter>();
             csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             box.namePlate = plate.gameObject;
-            box.nameText = Txt(plate, "Name", "이름", 34, TextAnchor.MiddleCenter, TextColor, FontStyle.Bold);
+            box.nameText = Txt(plate, "Name", "이름", 30, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold);
             box.nameText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            box.nameText.gameObject.AddComponent<LayoutElement>().minWidth = 140;
+            box.nameText.gameObject.AddComponent<LayoutElement>().minWidth = 100;
 
             // 본문
-            box.bodyText = Txt(boxRt, "Body", "여기에 대사가 표시됩니다.", 36, TextAnchor.UpperLeft, TextColor);
-            Stretch(box.bodyText.rectTransform, 80, 40, 80, 64);
-            box.bodyText.lineSpacing = 1.2f;
-            AddShadow(box.bodyText);
+            box.bodyText = Txt(boxRt, "Body", "여기에 대사가 표시됩니다.", 34, TextAnchor.UpperLeft, Brown);
+            Stretch(box.bodyText.rectTransform, 84, 44, 84, 60);
+            box.bodyText.lineSpacing = 1.3f;
 
-            var next = Txt(boxRt, "NextIndicator", "▼", 28, TextAnchor.MiddleCenter, Accent);
-            Place(next.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 24), new Vector2(40, 40));
-            box.nextIndicator = next;
+            // 다음 대사 표시 = 분홍 동그라미 + 아래 화살표
+            var next = Child("NextIndicator", boxRt);
+            Place(next, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 32), new Vector2(38, 38));
+            var nextImg = Pill(next, Pink, 38);
+            var nextArrow = Img(Child("Arrow", next), Color.white, arrow);
+            nextArrow.type = Image.Type.Simple;
+            Stretch(nextArrow.rectTransform, 9, 9, 9, 9);
+            nextArrow.rectTransform.localEulerAngles = new Vector3(0, 0, -90);
+            box.nextIndicator = nextImg;
 
             // 퀵 메뉴 (화면 왼쪽 위 — 오른쪽 위는 날짜/스탯창 자리)
             var qm = Child("QuickMenu", gameUI);
-            Place(qm, new Vector2(0, 1), new Vector2(0, 1), new Vector2(36, -34), new Vector2(1250, 44));
+            Place(qm, new Vector2(0, 1), new Vector2(0, 1), new Vector2(34, -28), new Vector2(1260, 46));
             box.quickMenu = qm.gameObject;
             var qhl = qm.gameObject.AddComponent<HorizontalLayoutGroup>();
-            qhl.spacing = 6;
+            qhl.spacing = 8;
             qhl.childAlignment = TextAnchor.MiddleLeft;
             qhl.childControlWidth = qhl.childControlHeight = true;
             qhl.childForceExpandWidth = qhl.childForceExpandHeight = false;
@@ -236,28 +255,31 @@ namespace VN.EditorTools
 
             engine.hud = BuildHUD(gameUI);
 
-            // 알림 문구 (저장 완료 등)
-            var notice = Txt(gameUI, "Notice", "", 32, TextAnchor.MiddleCenter, TextColor);
-            Place(notice.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -110), new Vector2(900, 60));
-            AddShadow(notice);
-            notice.gameObject.SetActive(false);
+            // 알림 문구 (저장 완료 등) — 흰 알약
+            var noticeRt = Child("Notice", gameUI);
+            Place(noticeRt, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -100), new Vector2(540, 58));
+            AddDropShadow(Pill(noticeRt, Color.white, 58));
+            var notice = Txt(noticeRt, "Text", "", 26, TextAnchor.MiddleCenter, Brown, FontStyle.Bold);
+            Stretch(notice.rectTransform);
+            noticeRt.gameObject.SetActive(false);
             box.noticeText = notice;
+            box.noticeRoot = noticeRt.gameObject;
 
-            // 선택지
+            // 선택지 — 흰 둥근 버튼, 마우스 올리면 분홍 + 양옆 화살표
             var choiceRt = Child("ChoiceMenu", gameUI);
-            Stretch(choiceRt, 0, 330, 0, 0);
-            Img(choiceRt, new Color(0, 0, 0, 0.3f)).raycastTarget = true;
+            Stretch(choiceRt, 0, 320, 0, 0);
+            Img(choiceRt, new Color(0.22f, 0.12f, 0.14f, 0.25f)).raycastTarget = true;
             var choice = choiceRt.gameObject.AddComponent<VNChoiceMenu>();
             var options = Child("Options", choiceRt);
-            Place(options, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1000, 640));
+            Place(options, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -10), new Vector2(980, 640));
             var vl = options.gameObject.AddComponent<VerticalLayoutGroup>();
-            vl.spacing = 22;
+            vl.spacing = 16;
             vl.childAlignment = TextAnchor.MiddleCenter;
             vl.childControlWidth = vl.childControlHeight = true;
             vl.childForceExpandWidth = true;
             vl.childForceExpandHeight = false;
-            var template = MakeButton(options, "OptionTemplate", "선택지", 34, ButtonColor, Accent);
-            template.gameObject.AddComponent<LayoutElement>().preferredHeight = 88;
+            var template = WhiteButton(options, "OptionTemplate", "선택지", 30, 78, true);
+            template.gameObject.AddComponent<LayoutElement>().preferredHeight = 78;
             template.gameObject.SetActive(false);
             choice.container = options;
             choice.optionTemplate = template;
@@ -273,47 +295,44 @@ namespace VN.EditorTools
             var hud = root.gameObject.AddComponent<VNAffectionHUD>();
             var topRight = new Vector2(1, 1);
 
-            // 날짜 (오른쪽 위, 항상 표시)
+            // 날짜 (오른쪽 위 흰 알약, 항상 표시)
             var chip = Child("DayChip", root);
-            Place(chip, topRight, topRight, new Vector2(-36, -30), new Vector2(520, 52));
-            Img(chip, PanelColor, round);
-            var co = chip.gameObject.AddComponent<Outline>();
-            co.effectColor = new Color(Accent.r, Accent.g, Accent.b, 0.35f);
-            co.effectDistance = new Vector2(2, -2);
+            Place(chip, topRight, topRight, new Vector2(-34, -28), new Vector2(460, 46));
+            AddDropShadow(Pill(chip, new Color(1, 1, 1, 0.95f), 46));
             hud.dayChip = chip.gameObject;
-            hud.dayText = Txt(chip, "Day", "1일차", 26, TextAnchor.MiddleRight, new Color(1f, 0.85f, 0.92f));
-            Stretch(hud.dayText.rectTransform, 24, 0, 24, 0);
+            var dot = Img(Child("Heart", chip), Pink, heart);
+            dot.type = Image.Type.Simple;
+            Place(dot.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(18, 0), new Vector2(24, 24));
+            hud.dayText = Txt(chip, "Day", "1일차", 22, TextAnchor.MiddleRight, Brown, FontStyle.Bold);
+            Stretch(hud.dayText.rectTransform, 50, 0, 24, 0);
 
             // 스탯창 — 게이지 1개
             var panel = Child("Panel", root);
-            Place(panel, topRight, topRight, new Vector2(-36, -92), new Vector2(520, 110));
-            Img(panel, PanelColor, round);
-            var o = panel.gameObject.AddComponent<Outline>();
-            o.effectColor = new Color(Accent.r, Accent.g, Accent.b, 0.35f);
-            o.effectDistance = new Vector2(2, -2);
+            Place(panel, topRight, topRight, new Vector2(-34, -86), new Vector2(460, 104));
+            AddDropShadow(Rounded(panel, new Color(1f, 0.98f, 0.97f, 0.96f), 22));
             hud.panel = panel.gameObject;
 
-            hud.nameText = Txt(panel, "Name", "♥ 승주", 30, TextAnchor.MiddleLeft, Accent, FontStyle.Bold);
-            Place(hud.nameText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(28, -12), new Vector2(240, 40));
+            hud.nameText = Txt(panel, "Name", "♥ 승주", 26, TextAnchor.MiddleLeft, PinkDeep, FontStyle.Bold);
+            Place(hud.nameText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(26, -12), new Vector2(220, 38));
 
-            hud.stageText = Txt(panel, "Stage", "그냥 친구", 24, TextAnchor.MiddleRight, TextColor);
-            Place(hud.stageText.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-28, -12), new Vector2(280, 40));
+            hud.stageText = Txt(panel, "Stage", "그냥 친구", 20, TextAnchor.MiddleRight, BrownSoft);
+            Place(hud.stageText.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-26, -12), new Vector2(240, 38));
 
-            var gaugeBg = Img(Child("Gauge", panel), new Color(1, 1, 1, 0.12f), round);
-            Place(gaugeBg.rectTransform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(28, 20), new Vector2(330, 26));
-            hud.gaugeFill = Img(Child("Fill", gaugeBg.rectTransform), Accent, round);
+            var gaugeBg = Pill(Child("Gauge", panel), Track, 20);
+            Place(gaugeBg.rectTransform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(26, 22), new Vector2(290, 20));
+            hud.gaugeFill = Pill(Child("Fill", gaugeBg.rectTransform), Pink, 20);
             var fillRt = hud.gaugeFill.rectTransform;
             fillRt.anchorMin = Vector2.zero;
             fillRt.anchorMax = new Vector2(0.2f, 1);
             fillRt.offsetMin = fillRt.offsetMax = Vector2.zero;
 
-            hud.valueText = Txt(panel, "Value", "0 / 100", 24, TextAnchor.MiddleRight, TextColor);
-            Place(hud.valueText.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-28, 14), new Vector2(130, 36));
+            hud.valueText = Txt(panel, "Value", "0 / 100", 20, TextAnchor.MiddleRight, Brown, FontStyle.Bold);
+            Place(hud.valueText.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-26, 14), new Vector2(120, 34));
 
             // +10 알림은 스탯창 왼쪽에
-            hud.deltaText = Txt(panel, "Delta", "♥ +10", 34, TextAnchor.MiddleRight, Accent, FontStyle.Bold);
+            hud.deltaText = Txt(panel, "Delta", "♥ +10", 30, TextAnchor.MiddleRight, PinkDeep, FontStyle.Bold);
             Place(hud.deltaText.rectTransform, new Vector2(0, 0.5f), new Vector2(1, 0.5f), new Vector2(-18, 0), new Vector2(220, 50));
-            AddShadow(hud.deltaText);
+            AddOutline(hud.deltaText, Color.white, 2);
             hud.deltaText.gameObject.SetActive(false);
 
             panel.gameObject.SetActive(false);
@@ -321,14 +340,11 @@ namespace VN.EditorTools
             // 스탯창 — 게이지 여러 개 (@gauge 승현 서연 기주 수민). 줄 수에 맞게 패널이 늘어남
             var multi = Child("MultiPanel", root);
             multi.anchorMin = multi.anchorMax = multi.pivot = topRight;
-            multi.anchoredPosition = new Vector2(-36, -92);
-            multi.sizeDelta = new Vector2(520, 0);
-            Img(multi, PanelColor, round);
-            var mo = multi.gameObject.AddComponent<Outline>();
-            mo.effectColor = new Color(Accent.r, Accent.g, Accent.b, 0.35f);
-            mo.effectDistance = new Vector2(2, -2);
+            multi.anchoredPosition = new Vector2(-34, -86);
+            multi.sizeDelta = new Vector2(460, 0);
+            AddDropShadow(Rounded(multi, new Color(1f, 0.98f, 0.97f, 0.96f), 22));
             var mvl = multi.gameObject.AddComponent<VerticalLayoutGroup>();
-            mvl.padding = new RectOffset(28, 28, 14, 14);
+            mvl.padding = new RectOffset(26, 26, 14, 14);
             mvl.spacing = 6;
             mvl.childControlWidth = mvl.childControlHeight = true;
             mvl.childForceExpandWidth = true;
@@ -337,20 +353,20 @@ namespace VN.EditorTools
             hud.multiPanel = multi.gameObject;
 
             var row = Child("RowTemplate", multi);
-            row.gameObject.AddComponent<LayoutElement>().preferredHeight = 38;
-            var rowName = Txt(row, "Name", "♥ 이름", 26, TextAnchor.MiddleLeft, Accent, FontStyle.Bold);
-            Place(rowName.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), Vector2.zero, new Vector2(130, 38));
-            var rowGauge = Img(Child("Gauge", row), new Color(1, 1, 1, 0.12f), round);
-            Place(rowGauge.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(136, 0), new Vector2(250, 20));
-            var rowFill = Img(Child("Fill", rowGauge.rectTransform), Accent, round);
+            row.gameObject.AddComponent<LayoutElement>().preferredHeight = 36;
+            var rowName = Txt(row, "Name", "♥ 이름", 22, TextAnchor.MiddleLeft, PinkDeep, FontStyle.Bold);
+            Place(rowName.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), Vector2.zero, new Vector2(118, 36));
+            var rowGauge = Pill(Child("Gauge", row), Track, 16);
+            Place(rowGauge.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(120, 0), new Vector2(232, 16));
+            var rowFill = Pill(Child("Fill", rowGauge.rectTransform), Pink, 16);
             rowFill.rectTransform.anchorMin = Vector2.zero;
             rowFill.rectTransform.anchorMax = new Vector2(0.2f, 1);
             rowFill.rectTransform.offsetMin = rowFill.rectTransform.offsetMax = Vector2.zero;
-            var rowValue = Txt(row, "Value", "0", 24, TextAnchor.MiddleRight, TextColor);
-            Place(rowValue.rectTransform, new Vector2(1, 0.5f), new Vector2(1, 0.5f), Vector2.zero, new Vector2(70, 38));
-            var rowDelta = Txt(row, "Delta", "♥ +10", 28, TextAnchor.MiddleRight, Accent, FontStyle.Bold);
-            Place(rowDelta.rectTransform, new Vector2(0, 0.5f), new Vector2(1, 0.5f), new Vector2(-46, 0), new Vector2(200, 40));
-            AddShadow(rowDelta);
+            var rowValue = Txt(row, "Value", "0", 20, TextAnchor.MiddleRight, Brown, FontStyle.Bold);
+            Place(rowValue.rectTransform, new Vector2(1, 0.5f), new Vector2(1, 0.5f), Vector2.zero, new Vector2(60, 36));
+            var rowDelta = Txt(row, "Delta", "♥ +10", 24, TextAnchor.MiddleRight, PinkDeep, FontStyle.Bold);
+            Place(rowDelta.rectTransform, new Vector2(0, 0.5f), new Vector2(1, 0.5f), new Vector2(-44, 0), new Vector2(200, 40));
+            AddOutline(rowDelta, Color.white, 2);
             rowDelta.gameObject.SetActive(false);
             row.gameObject.SetActive(false);
             hud.rowTemplate = row.gameObject;
@@ -365,31 +381,55 @@ namespace VN.EditorTools
             var rt = Child("TitleMenu", root);
             Stretch(rt);
             var title = rt.gameObject.AddComponent<VNTitleMenu>();
-            Stretch(Img(Child("BlackBase", rt), Color.black).rectTransform);
+            Stretch(Img(Child("BaseColor", rt), TitleBg).rectTransform);
             title.background = Img(Child("Background", rt), Color.white);
             Stretch(title.background.rectTransform);
 
-            var shade = Img(Child("Shade", rt), new Color(0.05f, 0.03f, 0.1f, 0.45f));
-            shade.rectTransform.anchorMin = Vector2.zero;
-            shade.rectTransform.anchorMax = new Vector2(0.42f, 1);
-            shade.rectTransform.offsetMin = shade.rectTransform.offsetMax = Vector2.zero;
+            // 왼쪽: 캐릭터 3명 (뒤 2명 → 가운데 앞 1명 순서로 그려야 겹침이 맞음)
+            var chars = Child("Characters", rt);
+            Stretch(chars);
+            var slots = new Image[3];
+            float[] xs = { 330, 600, 870 };
+            float[] hs = { 900, 1000, 900 };
+            foreach (int i in new[] { 0, 2, 1 })
+            {
+                var img = Img(Child("Character" + i, chars), Color.white);
+                img.preserveAspect = true;
+                Place(img.rectTransform, new Vector2(0, 0), new Vector2(0.5f, 0), new Vector2(xs[i], -60), new Vector2(hs[i] * 0.62f, hs[i]));
+                if (i != 1) img.color = new Color(0.94f, 0.92f, 0.94f); // 뒤쪽은 살짝 톤 다운
+                slots[i] = img;
+            }
+            title.characterSlots = slots;
 
-            title.titleText = Txt(rt, "Title", "타이틀", 92, TextAnchor.LowerLeft, Color.white, FontStyle.Bold);
-            Place(title.titleText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(120, -120), new Vector2(1500, 180));
+            // 오른쪽: 제목 + 버튼 묶음
+            var right = Child("Right", rt);
+            Place(right, new Vector2(1, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-520, 0), new Vector2(820, 1000));
+
+            // 장식: 하트, 반짝이
+            Deco(right, heart, Pink, new Vector2(-300, 310), 46, -14);
+            Deco(right, heart, Lavender, new Vector2(330, 360), 34, 12);
+            Deco(right, heart, PinkSoft, new Vector2(345, 150), 54, 18);
+            Deco(right, sparkle, Color.white, new Vector2(-250, 380), 44, 0);
+            Deco(right, sparkle, Lavender, new Vector2(280, 250), 30, 0);
+            Deco(right, sparkle, Color.white, new Vector2(-330, 170), 26, 0);
+
+            title.titleText = Txt(right, "Title", "타이틀", 128, TextAnchor.MiddleCenter, PinkDeep, FontStyle.Bold);
+            Place(title.titleText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 270), new Vector2(820, 170));
             title.titleText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            var o = title.titleText.gameObject.AddComponent<Outline>();
-            o.effectColor = new Color(AccentDark.r, AccentDark.g, AccentDark.b, 0.9f);
-            o.effectDistance = new Vector2(3, -3);
+            AddOutline(title.titleText, Color.white, 6);
+            var ts = title.titleText.gameObject.AddComponent<Shadow>();
+            ts.effectColor = new Color(PinkDeep.r, PinkDeep.g, PinkDeep.b, 0.3f);
+            ts.effectDistance = new Vector2(0, -10);
 
-            title.subtitleText = Txt(rt, "Subtitle", "부제", 36, TextAnchor.UpperLeft, new Color(1f, 0.85f, 0.92f), FontStyle.Italic);
-            Place(title.subtitleText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(128, -310), new Vector2(1200, 60));
-            AddShadow(title.subtitleText);
+            title.subtitleText = Txt(right, "Subtitle", "부제", 36, TextAnchor.MiddleCenter, LavenderDeep, FontStyle.Bold);
+            Place(title.subtitleText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 160), new Vector2(820, 56));
+            AddOutline(title.subtitleText, Color.white, 3);
 
-            var buttons = Child("Buttons", rt);
-            Place(buttons, Vector2.zero, Vector2.zero, new Vector2(120, 110), new Vector2(460, 500));
+            var buttons = Child("Buttons", right);
+            Place(buttons, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1), new Vector2(0, 70), new Vector2(420, 420));
             var vl = buttons.gameObject.AddComponent<VerticalLayoutGroup>();
-            vl.spacing = 20;
-            vl.childAlignment = TextAnchor.LowerLeft;
+            vl.spacing = 16;
+            vl.childAlignment = TextAnchor.UpperCenter;
             vl.childControlWidth = vl.childControlHeight = true;
             vl.childForceExpandWidth = true;
             vl.childForceExpandHeight = false;
@@ -399,89 +439,99 @@ namespace VN.EditorTools
             title.settingsButton = TitleButton(buttons, "환경 설정");
             title.quitButton = TitleButton(buttons, "종료");
 
-            var ver = Txt(rt, "Version", "v0.2", 24, TextAnchor.LowerRight, new Color(1, 1, 1, 0.6f));
+            var ver = Txt(rt, "Version", "v0.4", 22, TextAnchor.LowerRight, BrownSoft);
             Place(ver.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-30, 20), new Vector2(300, 40));
 
-            // 모드 선택 창 (새로 시작 → 모드 고르기). 버튼은 VNEngine.modes 로 자동 생성
-            var modeRt = Modal(rt, "ModeSelect", new Vector2(1100, 640), out var win);
-            Header(win, "모드 선택");
-            var list = Child("Modes", win);
-            Stretch(list, 60, 130, 60, 120);
+            // 모드 선택 창 (새로 시작 → 모드 고르기). 카드는 VNEngine.modes 로 자동 생성
+            var modeRt = Menu(rt, "ModeSelect", new Vector2(1100, 640), "모드 선택", "누구의 이야기로 시작할까요?",
+                false, VNMenuKind.Load, out var content, out var close, out _, out _, out _);
+            var list = Child("Modes", content);
+            Stretch(list, 30, 30, 30, 30);
             var mvl = list.gameObject.AddComponent<VerticalLayoutGroup>();
-            mvl.spacing = 24;
+            mvl.spacing = 22;
             mvl.childAlignment = TextAnchor.MiddleCenter;
             mvl.childControlWidth = mvl.childControlHeight = true;
             mvl.childForceExpandWidth = true;
             mvl.childForceExpandHeight = false;
-            var modeBtn = MakeButton(list, "ModeTemplate", "모드", 40, ButtonColor, AccentDark);
+            var modeBtn = CardButton(list, "ModeTemplate", "모드", 38, 24, Brown);
+            var accent = Rounded(Child("Accent", modeBtn.transform), Pink, 7);
+            accent.rectTransform.anchorMin = new Vector2(0, 0);
+            accent.rectTransform.anchorMax = new Vector2(0, 1);
+            accent.rectTransform.pivot = new Vector2(0, 0.5f);
+            accent.rectTransform.offsetMin = new Vector2(24, 24);
+            accent.rectTransform.offsetMax = new Vector2(38, -24);
             var modeLabel = modeBtn.GetComponentInChildren<Text>();
             modeLabel.alignment = TextAnchor.MiddleLeft;
-            modeLabel.lineSpacing = 1.2f;
-            Stretch(modeLabel.rectTransform, 48, 10, 32, 10);
-            modeBtn.gameObject.AddComponent<LayoutElement>().preferredHeight = 150;
+            modeLabel.lineSpacing = 1.25f;
+            Stretch(modeLabel.rectTransform, 66, 10, 40, 10);
+            modeBtn.gameObject.AddComponent<LayoutElement>().preferredHeight = 140;
             modeBtn.gameObject.SetActive(false);
             title.modePanel = modeRt.gameObject;
             title.modeContainer = list;
             title.modeTemplate = modeBtn;
-            title.modeBackButton = BottomButton(win, "뒤로");
+            title.modeColors = new[] { Pink, Lavender, Hex("8FCFB8"), Hex("F5C26B") };
+            title.modeBackButton = close;
             modeRt.gameObject.SetActive(false);
             return title;
         }
 
         static VNSaveLoadMenu BuildSaveLoad(Transform root)
         {
-            var rt = Modal(root, "SaveLoadMenu", new Vector2(1560, 900), out var win);
+            var rt = Menu(root, "SaveLoadMenu", new Vector2(1380, 800), "저장하기", "지금까지의 이야기를 저장합니다.",
+                true, VNMenuKind.Save, out var content, out var close, out var header, out var desc, out var tabs);
             var menu = rt.gameObject.AddComponent<VNSaveLoadMenu>();
-            menu.headerText = Header(win, "저장하기");
+            menu.headerText = header;
+            menu.descText = desc;
+            menu.tabs = tabs;
 
-            var grid = Child("Slots", win);
-            Stretch(grid, 50, 130, 50, 110);
+            var grid = Child("Slots", content);
+            Stretch(grid, 24, 24, 24, 24);
             var g = grid.gameObject.AddComponent<GridLayoutGroup>();
-            g.cellSize = new Vector2(715, 150);
-            g.spacing = new Vector2(30, 20);
+            g.cellSize = new Vector2(610, 124);
+            g.spacing = new Vector2(20, 16);
             g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             g.constraintCount = 2;
             g.childAlignment = TextAnchor.UpperCenter;
 
-            var slot = MakeButton(grid, "SlotTemplate", "No.1", 30, SlotColor, AccentDark);
+            var slot = CardButton(grid, "SlotTemplate", "No.1", 26, 20, Brown);
             var label = slot.GetComponentInChildren<Text>();
             label.alignment = TextAnchor.MiddleLeft;
-            Stretch(label.rectTransform, 36, 16, 36, 16);
+            Stretch(label.rectTransform, 34, 14, 30, 14);
             label.lineSpacing = 1.25f;
             slot.gameObject.SetActive(false);
             menu.slotTemplate = slot;
             menu.slotContainer = grid;
 
-            menu.closeButton = BottomButton(win, "닫기");
+            menu.closeButton = close;
             return menu;
         }
 
         static VNSettingsMenu BuildSettings(Transform root)
         {
-            var rt = Modal(root, "SettingsMenu", new Vector2(1100, 780), out var win);
+            var rt = Menu(root, "SettingsMenu", new Vector2(1380, 800), "환경 설정", "게임 환경을 설정할 수 있습니다.",
+                true, VNMenuKind.Settings, out var content, out var close, out _, out _, out _);
             var menu = rt.gameObject.AddComponent<VNSettingsMenu>();
-            Header(win, "환경 설정");
 
-            menu.textSpeedSlider = SliderRow(win, "텍스트 속도", -140, 10f, 150f, false, out menu.textSpeedValue);
-            menu.autoDelaySlider = SliderRow(win, "오토 대기 시간", -240, 0.5f, 5f, false, out menu.autoDelayValue);
-            menu.bgmSlider = SliderRow(win, "배경음 볼륨", -340, 0f, 1f, false, out menu.bgmValue);
-            menu.seSlider = SliderRow(win, "효과음 볼륨", -440, 0f, 1f, false, out menu.seValue);
-            menu.fullscreenToggle = ToggleRow(win, "전체 화면", -540);
+            menu.textSpeedSlider = SliderRow(content, "텍스트 속도", -50, 10f, 150f, false, out menu.textSpeedValue);
+            menu.autoDelaySlider = SliderRow(content, "오토 대기 시간", -150, 0.5f, 5f, false, out menu.autoDelayValue);
+            menu.bgmSlider = SliderRow(content, "배경음 볼륨", -250, 0f, 1f, false, out menu.bgmValue);
+            menu.seSlider = SliderRow(content, "효과음 볼륨", -350, 0f, 1f, false, out menu.seValue);
+            menu.fullscreenToggle = ToggleRow(content, "전체 화면", -450);
 
-            menu.closeButton = BottomButton(win, "닫기");
+            menu.closeButton = close;
             return menu;
         }
 
         static VNBacklog BuildBacklog(Transform root)
         {
-            var rt = Modal(root, "Backlog", new Vector2(1500, 920), out var win);
+            var rt = Menu(root, "Backlog", new Vector2(1380, 800), "대사 로그", "지나간 대사를 다시 볼 수 있습니다.",
+                true, VNMenuKind.Log, out var content, out var close, out _, out _, out _);
             var log = rt.gameObject.AddComponent<VNBacklog>();
-            Header(win, "대사 로그");
 
             // 스크롤 영역
-            var sv = Child("Scroll", win);
-            Stretch(sv, 50, 130, 50, 110);
-            var srImg = Img(sv, new Color(0, 0, 0, 0.25f), round);
+            var sv = Child("Scroll", content);
+            Stretch(sv, 10, 10, 10, 10);
+            var srImg = Img(sv, new Color(0, 0, 0, 0));
             srImg.raycastTarget = true;
             var sr = sv.gameObject.AddComponent<ScrollRect>();
             sr.horizontal = false;
@@ -493,19 +543,19 @@ namespace VN.EditorTools
             viewport.gameObject.AddComponent<RectMask2D>();
             sr.viewport = viewport;
 
-            var content = Child("Content", viewport);
-            content.anchorMin = new Vector2(0, 1);
-            content.anchorMax = new Vector2(1, 1);
-            content.pivot = new Vector2(0.5f, 1);
-            content.offsetMin = content.offsetMax = Vector2.zero;
-            var vl = content.gameObject.AddComponent<VerticalLayoutGroup>();
-            vl.padding = new RectOffset(30, 30, 20, 20);
-            vl.spacing = 28;
+            var contentRt = Child("Content", viewport);
+            contentRt.anchorMin = new Vector2(0, 1);
+            contentRt.anchorMax = new Vector2(1, 1);
+            contentRt.pivot = new Vector2(0.5f, 1);
+            contentRt.offsetMin = contentRt.offsetMax = Vector2.zero;
+            var vl = contentRt.gameObject.AddComponent<VerticalLayoutGroup>();
+            vl.padding = new RectOffset(26, 26, 18, 18);
+            vl.spacing = 26;
             vl.childControlWidth = vl.childControlHeight = true;
             vl.childForceExpandWidth = true;
             vl.childForceExpandHeight = false;
-            content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            sr.content = content;
+            contentRt.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            sr.content = contentRt;
 
             // 스크롤바
             var bar = Child("Scrollbar", sv);
@@ -514,12 +564,12 @@ namespace VN.EditorTools
             bar.pivot = new Vector2(1, 0.5f);
             bar.offsetMin = new Vector2(-20, 14);
             bar.offsetMax = new Vector2(-8, -14);
-            Img(bar, new Color(1, 1, 1, 0.08f), round).raycastTarget = true;
+            Pill(bar, Track, 12).raycastTarget = true;
             var sb = bar.gameObject.AddComponent<Scrollbar>();
             sb.direction = Scrollbar.Direction.BottomToTop;
             var area = Child("Sliding Area", bar);
             Stretch(area);
-            var handle = Img(Child("Handle", area), Accent, round);
+            var handle = Pill(Child("Handle", area), Pink, 12);
             handle.raycastTarget = true;
             handle.rectTransform.offsetMin = handle.rectTransform.offsetMax = Vector2.zero;
             sb.handleRect = handle.rectTransform;
@@ -527,79 +577,78 @@ namespace VN.EditorTools
             sr.verticalScrollbar = sb;
             sr.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
 
-            var entry = Txt(content, "EntryTemplate", "대사", 32, TextAnchor.UpperLeft, TextColor);
-            entry.lineSpacing = 1.2f;
+            var entry = Txt(contentRt, "EntryTemplate", "대사", 28, TextAnchor.UpperLeft, Brown);
+            entry.lineSpacing = 1.3f;
             entry.gameObject.SetActive(false);
             log.entryTemplate = entry;
-            log.content = content;
+            log.content = contentRt;
             log.scrollRect = sr;
 
-            log.closeButton = BottomButton(win, "닫기");
+            log.closeButton = close;
             return log;
         }
 
         static VNGallery BuildGallery(Transform root)
         {
-            var rt = Modal(root, "Gallery", new Vector2(1560, 900), out var win);
+            var rt = Menu(root, "Gallery", new Vector2(1380, 800), "갤러리", "지금까지 모은 CG와 엔딩을 볼 수 있습니다.",
+                true, VNMenuKind.Gallery, out var content, out var close, out _, out _, out _);
             var gal = rt.gameObject.AddComponent<VNGallery>();
-            Header(win, "갤러리");
 
-            // 탭 (CG / 엔딩)
-            var tabs = Child("Tabs", win);
-            Place(tabs, new Vector2(0, 1), new Vector2(0, 1), new Vector2(50, -36), new Vector2(320, 56));
+            // 탭 (CG / 엔딩) + 개수
+            var tabs = Child("Tabs", content);
+            Place(tabs, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -20), new Vector2(300, 50));
             var thl = tabs.gameObject.AddComponent<HorizontalLayoutGroup>();
             thl.spacing = 12;
             thl.childControlWidth = thl.childControlHeight = true;
             thl.childForceExpandWidth = thl.childForceExpandHeight = true;
-            gal.cgTabButton = MakeButton(tabs, "CGTab", "CG", 30, ButtonColor, AccentDark);
-            gal.endingTabButton = MakeButton(tabs, "EndingTab", "엔딩", 30, ButtonColor, AccentDark);
+            gal.cgTabButton = SmallButton(tabs, "CGTab", "CG", 24, 50);
+            gal.endingTabButton = SmallButton(tabs, "EndingTab", "엔딩", 24, 50);
 
-            gal.countText = Txt(win, "Count", "0 / 0", 28, TextAnchor.MiddleRight, new Color(1f, 0.85f, 0.92f));
-            Place(gal.countText.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-50, -36), new Vector2(300, 56));
+            gal.countText = Txt(content, "Count", "0 / 0", 24, TextAnchor.MiddleRight, BrownSoft, FontStyle.Bold);
+            Place(gal.countText.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-28, -20), new Vector2(300, 50));
 
             // CG 페이지 — 4칸씩 썸네일
-            var cgPage = Child("CGPage", win);
-            Stretch(cgPage, 50, 130, 50, 120);
+            var cgPage = Child("CGPage", content);
+            Stretch(cgPage, 24, 24, 24, 90);
             gal.cgPage = cgPage.gameObject;
             var grid = cgPage.gameObject.AddComponent<GridLayoutGroup>();
-            grid.cellSize = new Vector2(352, 220);
+            grid.cellSize = new Vector2(286, 190);
             grid.spacing = new Vector2(20, 20);
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = 4;
             grid.childAlignment = TextAnchor.UpperCenter;
             gal.cgContainer = cgPage;
 
-            var slot = MakeButton(cgPage, "SlotTemplate", "?", 60, SlotColor, AccentDark);
+            var slot = CardButton(cgPage, "SlotTemplate", "?", 22, 18, BrownSoft);
             var slotLabel = slot.GetComponentInChildren<Text>();
             slotLabel.gameObject.name = "Label";
             var thumb = Img(Child("Thumb", slot.transform), Color.white);
-            Stretch(thumb.rectTransform, 8, 44, 8, 8);
+            Stretch(thumb.rectTransform, 10, 40, 10, 10);
             thumb.preserveAspect = true;
-            thumb.transform.SetSiblingIndex(0);
-            slotLabel.fontSize = 26;
+            thumb.transform.SetSiblingIndex(1); // 배경 위, 글자 아래
             slotLabel.alignment = TextAnchor.LowerCenter;
-            Stretch(slotLabel.rectTransform, 8, 6, 8, 6);
+            Stretch(slotLabel.rectTransform, 8, 8, 8, 6);
             slot.gameObject.SetActive(false);
             gal.cgSlotTemplate = slot;
 
             // 엔딩 페이지 — 목록
-            var endPage = Child("EndingPage", win);
-            Stretch(endPage, 80, 130, 80, 120);
+            var endPage = Child("EndingPage", content);
+            Stretch(endPage, 40, 24, 40, 90);
             gal.endingPage = endPage.gameObject;
             var vl = endPage.gameObject.AddComponent<VerticalLayoutGroup>();
-            vl.spacing = 10;
+            vl.spacing = 8;
             vl.childAlignment = TextAnchor.UpperLeft;
             vl.childControlWidth = vl.childControlHeight = true;
             vl.childForceExpandWidth = true;
             vl.childForceExpandHeight = false;
             gal.endingContainer = endPage;
-            var row = Txt(endPage, "RowTemplate", "♥ 엔딩", 32, TextAnchor.MiddleLeft, TextColor);
-            row.gameObject.AddComponent<LayoutElement>().preferredHeight = 50;
+            var row = Txt(endPage, "RowTemplate", "♥ 엔딩", 28, TextAnchor.MiddleLeft, Brown);
+            row.gameObject.AddComponent<LayoutElement>().preferredHeight = 46;
             row.gameObject.SetActive(false);
             gal.endingRowTemplate = row;
             endPage.gameObject.SetActive(false);
 
-            gal.closeButton = BottomButton(win, "닫기");
+            gal.closeButton = close;
 
             // CG 크게 보기 (클릭하면 닫힘)
             var viewer = Child("Viewer", rt);
@@ -619,29 +668,541 @@ namespace VN.EditorTools
 
         static VNConfirmDialog BuildConfirm(Transform root)
         {
-            var rt = Modal(root, "ConfirmDialog", new Vector2(820, 380), out var win);
-            var dlg = rt.gameObject.AddComponent<VNConfirmDialog>();
-            dlg.messageText = Txt(win, "Message", "확인 메시지", 34, TextAnchor.MiddleCenter, TextColor);
-            Stretch(dlg.messageText.rectTransform, 40, 130, 40, 40);
-            dlg.messageText.lineSpacing = 1.2f;
+            var rt = Child("ConfirmDialog", root);
+            Stretch(rt);
+            Img(rt, DimColor).raycastTarget = true;
+            var win = Child("Window", rt);
+            Place(win, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(760, 340));
+            var wImg = Rounded(win, Cream, 30);
+            wImg.raycastTarget = true;
+            AddDropShadow(wImg);
+            var bar = Rounded(Child("Accent", win), Pink, 4);
+            Place(bar.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -26), new Vector2(64, 8));
 
-            dlg.yesButton = MakeButton(win, "Yes", "예", 32, AccentDark, Accent);
-            Place((RectTransform)dlg.yesButton.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(-140, 40), new Vector2(240, 72));
-            dlg.noButton = MakeButton(win, "No", "아니오", 32, ButtonColor, Accent);
-            Place((RectTransform)dlg.noButton.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(140, 40), new Vector2(240, 72));
+            var dlg = rt.gameObject.AddComponent<VNConfirmDialog>();
+            dlg.messageText = Txt(win, "Message", "확인 메시지", 30, TextAnchor.MiddleCenter, Brown, FontStyle.Bold);
+            Stretch(dlg.messageText.rectTransform, 40, 120, 40, 50);
+            dlg.messageText.lineSpacing = 1.3f;
+
+            dlg.yesButton = WhiteButton(win, "Yes", "예", 28, 64, false, Pink, Color.white);
+            Place((RectTransform)dlg.yesButton.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(-125, 40), new Vector2(220, 64));
+            dlg.noButton = WhiteButton(win, "No", "아니오", 28, 64);
+            Place((RectTransform)dlg.noButton.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(125, 40), new Vector2(220, 64));
             return dlg;
         }
 
-        // ───────────────────────── 부품 ─────────────────────────
+        // ───────────────────────── 메뉴 창 틀 ─────────────────────────
+
+        /// <summary>
+        /// 크림색 메뉴 창: 제목(분홍 막대 + 굵은 글씨) + 설명 + 오른쪽 위 둥근 X + 안쪽 베이지 영역
+        /// withTabs 면 창 왼쪽에 아이콘 탭(저장/불러오기/로그/갤러리/설정)이 붙음
+        /// </summary>
+        static RectTransform Menu(Transform root, string name, Vector2 size, string title, string desc, bool withTabs,
+            VNMenuKind kind, out RectTransform content, out Button close, out Text header, out Text descText, out VNMenuTabs tabs)
+        {
+            var rt = Child(name, root);
+            Stretch(rt);
+            Img(rt, DimColor).raycastTarget = true;
+
+            var win = Child("Window", rt);
+            Place(win, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(withTabs ? 56 : 0, 0), size);
+            var wImg = Rounded(win, Cream, 32);
+            wImg.raycastTarget = true;
+            AddDropShadow(wImg);
+
+            var bar = Rounded(Child("TitleBar", win), Pink, 4);
+            Place(bar.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(46, -38), new Vector2(8, 44));
+            header = Txt(win, "Header", title, 40, TextAnchor.MiddleLeft, Brown, FontStyle.Bold);
+            Place(header.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(68, -30), new Vector2(800, 60));
+            descText = Txt(win, "Desc", desc, 22, TextAnchor.MiddleLeft, BrownSoft);
+            Place(descText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(48, -90), new Vector2(900, 34));
+
+            close = CloseButton(win);
+
+            content = Child("Content", win);
+            Stretch(content, 40, 40, 40, 138);
+            Rounded(content, Inner, 22);
+
+            tabs = null;
+            if (withTabs)
+            {
+                var side = Child("Tabs", win);
+                Place(side, new Vector2(0, 1), new Vector2(1, 1), new Vector2(10, -40), new Vector2(120, 600));
+                var svl = side.gameObject.AddComponent<VerticalLayoutGroup>();
+                svl.spacing = 12;
+                svl.childAlignment = TextAnchor.UpperRight;
+                svl.childControlWidth = svl.childControlHeight = true;
+                svl.childForceExpandWidth = true;
+                svl.childForceExpandHeight = false;
+                side.SetAsFirstSibling(); // 창 뒤로 살짝 숨도록
+                tabs = win.gameObject.AddComponent<VNMenuTabs>();
+                tabs.current = kind;
+                tabs.normalBg = Color.white;
+                tabs.selectedBg = Brown;
+                tabs.normalFg = Brown;
+                tabs.selectedFg = Color.white;
+                tabs.tabs = new[]
+                {
+                    MenuTab(side, VNMenuKind.Save, "저장", iconFolder, "S"),
+                    MenuTab(side, VNMenuKind.Load, "불러오기", iconFolder, "L"),
+                    MenuTab(side, VNMenuKind.Log, "로그", iconLog, null),
+                    MenuTab(side, VNMenuKind.Gallery, "갤러리", iconImage, null),
+                    MenuTab(side, VNMenuKind.Settings, "설정", iconSettings, null),
+                };
+            }
+            return rt;
+        }
+
+        static VNMenuTabs.Tab MenuTab(Transform parent, VNMenuKind kind, string label, Sprite icon, string letter)
+        {
+            var rt = Child("Tab_" + label, parent);
+            var bg = Rounded(rt, Color.white, 22);
+            bg.raycastTarget = true;
+            AddDropShadow(bg);
+            var b = rt.gameObject.AddComponent<Button>();
+            b.targetGraphic = bg;
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            b.colors = TintBlock();
+            rt.gameObject.AddComponent<LayoutElement>().preferredHeight = 104;
+
+            var ic = Img(Child("Icon", rt), Brown, icon);
+            ic.type = Image.Type.Simple;
+            Place(ic.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(6, 14), new Vector2(54, 54));
+            if (letter != null)
+            {
+                var lt = Txt(ic.rectTransform, "Letter", letter, 22, TextAnchor.MiddleCenter, Brown, FontStyle.Bold);
+                Place(lt.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -4), new Vector2(40, 30));
+                // 아이콘 색을 따라가도록 VNMenuTabs 가 icon 만 칠하므로 글자는 Image 하위로 두고 같이 칠함
+                lt.gameObject.AddComponent<VNTintFollower>().source = ic;
+            }
+            var t = Txt(rt, "Label", label, 18, TextAnchor.MiddleCenter, Brown, FontStyle.Bold);
+            Place(t.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(6, 10), new Vector2(110, 26));
+
+            var pb = rt.gameObject.AddComponent<VNPillButton>();
+            pb.hoverScale = 1.05f;
+            return new VNMenuTabs.Tab { kind = kind, button = b, background = bg, icon = ic, label = t };
+        }
+
+        static Button CloseButton(RectTransform win)
+        {
+            var rt = Child("Close", win);
+            Place(rt, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-62, -62), new Vector2(60, 60));
+            var bg = Pill(rt, Brown, 60);
+            bg.raycastTarget = true;
+            var b = rt.gameObject.AddComponent<Button>();
+            b.targetGraphic = bg;
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            b.colors = TintBlock();
+            var x = Img(Child("X", rt), Color.white, xmark);
+            x.type = Image.Type.Simple;
+            Stretch(x.rectTransform, 15, 15, 15, 15);
+            var pb = rt.gameObject.AddComponent<VNPillButton>();
+            pb.hoverScale = 1.1f;
+            return b;
+        }
+
+        // ───────────────────────── 버튼 부품 ─────────────────────────
+
+        /// <summary>
+        /// 흰 둥근 버튼 (그림자 살짝). 마우스를 올리면 분홍으로 채워지고 글자가 흰색으로.
+        /// marks = 양옆에 » « 표시
+        /// </summary>
+        static Button WhiteButton(Transform parent, string name, string label, int fontSize, float height,
+            bool marks = false, Color? baseColor = null, Color? labelColor = null)
+        {
+            var rt = Child(name, parent);
+            float radius = height * 0.38f;
+            var img = Rounded(rt, baseColor ?? CardWhite, radius);
+            img.raycastTarget = true;
+            AddDropShadow(img);
+            var b = rt.gameObject.AddComponent<Button>();
+            b.targetGraphic = img;
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            b.colors = TintBlock();
+
+            var fill = Rounded(Child("HoverFill", rt), baseColor.HasValue ? PinkDeep : Pink, radius);
+            Stretch(fill.rectTransform);
+            fill.enabled = false;
+
+            Color normal = labelColor ?? Brown;
+            var t = Txt(rt, "Text", label, fontSize, TextAnchor.MiddleCenter, normal, FontStyle.Bold);
+            Stretch(t.rectTransform, 24, 4, 24, 4);
+
+            var pb = rt.gameObject.AddComponent<VNPillButton>();
+            pb.hoverFill = fill;
+            pb.label = t;
+            pb.labelNormal = normal;
+            pb.labelHover = Color.white;
+            pb.hoverScale = 1.03f;
+
+            if (marks)
+            {
+                var m = Child("Marks", rt);
+                Stretch(m);
+                var l = Txt(m, "Left", "»", fontSize + 6, TextAnchor.MiddleRight, LavenderDeep, FontStyle.Bold);
+                Place(l.rectTransform, new Vector2(0, 0.5f), new Vector2(1, 0.5f), new Vector2(-14, 2), new Vector2(60, height));
+                var r = Txt(m, "Right", "«", fontSize + 6, TextAnchor.MiddleLeft, LavenderDeep, FontStyle.Bold);
+                Place(r.rectTransform, new Vector2(1, 0.5f), new Vector2(0, 0.5f), new Vector2(14, 2), new Vector2(60, height));
+                m.gameObject.SetActive(false);
+                pb.hoverMarks = m.gameObject;
+            }
+            return b;
+        }
+
+        static Button TitleButton(Transform parent, string label)
+        {
+            var b = WhiteButton(parent, label, label, 30, 66, true);
+            b.gameObject.AddComponent<LayoutElement>().preferredHeight = 66;
+            return b;
+        }
+
+        /// <summary>작은 흰 버튼 (탭 등). 글자색은 그대로 두고 마우스 올리면 연분홍</summary>
+        static Button SmallButton(Transform parent, string name, string label, int fontSize, float height)
+        {
+            var rt = Child(name, parent);
+            float radius = height * 0.38f;
+            var img = Rounded(rt, CardWhite, radius);
+            img.raycastTarget = true;
+            AddDropShadow(img);
+            var b = rt.gameObject.AddComponent<Button>();
+            b.targetGraphic = img;
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            b.colors = TintBlock();
+            var fill = Rounded(Child("HoverFill", rt), PinkSoft, radius);
+            Stretch(fill.rectTransform);
+            fill.enabled = false;
+            var t = Txt(rt, "Text", label, fontSize, TextAnchor.MiddleCenter, Brown, FontStyle.Bold);
+            Stretch(t.rectTransform, 10, 2, 10, 2);
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            var pb = rt.gameObject.AddComponent<VNPillButton>();
+            pb.hoverFill = fill;
+            pb.hoverScale = 1.04f;
+            return b;
+        }
+
+        static Button QuickButton(Transform parent, string label)
+        {
+            var b = SmallButton(parent, label, label, 20, 44);
+            b.GetComponent<Image>().color = new Color(1, 1, 1, 0.94f);
+            var le = b.gameObject.AddComponent<LayoutElement>();
+            le.preferredWidth = 44 + label.Length * 20;
+            le.preferredHeight = 44;
+            return b;
+        }
+
+        /// <summary>흰 둥근 카드 (세이브 슬롯, 갤러리, 모드 선택). 마우스 올리면 분홍 테두리</summary>
+        static Button CardButton(Transform parent, string name, string label, int fontSize, float radius, Color labelColor)
+        {
+            var rt = Child(name, parent);
+            var img = Rounded(rt, CardWhite, radius);
+            img.raycastTarget = true;
+            AddDropShadow(img);
+            var b = rt.gameObject.AddComponent<Button>();
+            b.targetGraphic = img;
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            b.colors = TintBlock();
+
+            var ring = Ring(Child("HoverRing", rt), Pink, radius);
+            Stretch(ring.rectTransform);
+            ring.enabled = false;
+
+            var t = Txt(rt, "Text", label, fontSize, TextAnchor.MiddleCenter, labelColor);
+            Stretch(t.rectTransform, 20, 6, 20, 6);
+
+            var pb = rt.gameObject.AddComponent<VNPillButton>();
+            pb.hoverFill = ring;
+            pb.hoverScale = 1.02f;
+            return b;
+        }
+
+        static ColorBlock TintBlock()
+        {
+            var cb = ColorBlock.defaultColorBlock;
+            cb.normalColor = Color.white;
+            cb.highlightedColor = Color.white;
+            cb.selectedColor = Color.white;
+            cb.pressedColor = new Color(0.9f, 0.86f, 0.86f, 1f);
+            cb.disabledColor = new Color(1f, 1f, 1f, 0.5f);
+            cb.fadeDuration = 0.08f;
+            return cb;
+        }
+
+        static void Deco(RectTransform parent, Sprite sp, Color color, Vector2 pos, float size, float angle)
+        {
+            var img = Img(Child("Deco", parent), color, sp);
+            img.type = Image.Type.Simple;
+            Place(img.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, new Vector2(size, size));
+            img.rectTransform.localEulerAngles = new Vector3(0, 0, angle);
+        }
+
+        static Slider SliderRow(RectTransform parent, string label, float y, float min, float max, bool whole, out Text valueText)
+        {
+            var row = Child(label, parent);
+            row.anchorMin = new Vector2(0, 1);
+            row.anchorMax = new Vector2(1, 1);
+            row.pivot = new Vector2(0.5f, 1);
+            row.offsetMin = new Vector2(60, y - 70);
+            row.offsetMax = new Vector2(-60, y);
+            AddDropShadow(Rounded(row, CardWhite, 20));
+
+            var l = Txt(row, "Label", label, 26, TextAnchor.MiddleLeft, Brown, FontStyle.Bold);
+            Place(l.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(36, 0), new Vector2(280, 60));
+
+            var sRt = Child("Slider", row);
+            Place(sRt, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(340, 0), new Vector2(560, 18));
+            var bg = Pill(Child("Background", sRt), Track, 18);
+            bg.raycastTarget = true;
+            Stretch(bg.rectTransform);
+            var fillArea = Child("Fill Area", sRt);
+            Stretch(fillArea, 0, 0, 0, 0);
+            var fill = Pill(Child("Fill", fillArea), Pink, 18);
+            fill.rectTransform.anchorMin = Vector2.zero;
+            fill.rectTransform.anchorMax = new Vector2(0, 1);
+            fill.rectTransform.offsetMin = fill.rectTransform.offsetMax = Vector2.zero;
+            var handleArea = Child("Handle Slide Area", sRt);
+            Stretch(handleArea, 16, 0, 16, 0);
+            var handle = Pill(Child("Handle", handleArea), Color.white, 32);
+            handle.raycastTarget = true;
+            handle.rectTransform.anchorMin = new Vector2(0, 0.5f);
+            handle.rectTransform.anchorMax = new Vector2(0, 0.5f);
+            handle.rectTransform.sizeDelta = new Vector2(32, 32);
+            AddDropShadow(handle);
+            var hring = Pill(Child("Ring", handle.rectTransform), Pink, 32, true);
+            Stretch(hring.rectTransform);
+
+            var slider = sRt.gameObject.AddComponent<Slider>();
+            slider.fillRect = fill.rectTransform;
+            slider.handleRect = handle.rectTransform;
+            slider.targetGraphic = handle;
+            slider.direction = Slider.Direction.LeftToRight;
+            slider.minValue = min;
+            slider.maxValue = max;
+            slider.wholeNumbers = whole;
+            slider.navigation = new Navigation { mode = Navigation.Mode.None };
+
+            valueText = Txt(row, "Value", "", 24, TextAnchor.MiddleRight, PinkDeep, FontStyle.Bold);
+            Place(valueText.rectTransform, new Vector2(1, 0.5f), new Vector2(1, 0.5f), new Vector2(-36, 0), new Vector2(180, 60));
+            return slider;
+        }
+
+        static Toggle ToggleRow(RectTransform parent, string label, float y)
+        {
+            var row = Child(label, parent);
+            row.anchorMin = new Vector2(0, 1);
+            row.anchorMax = new Vector2(1, 1);
+            row.pivot = new Vector2(0.5f, 1);
+            row.offsetMin = new Vector2(60, y - 70);
+            row.offsetMax = new Vector2(-60, y);
+            AddDropShadow(Rounded(row, CardWhite, 20));
+
+            var l = Txt(row, "Label", label, 26, TextAnchor.MiddleLeft, Brown, FontStyle.Bold);
+            Place(l.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(36, 0), new Vector2(280, 60));
+
+            // 알약 스위치: 트랙 + 켜지면 분홍 채움 + 흰 동그라미
+            var box = Pill(Child("Box", row), Track, 40);
+            box.raycastTarget = true;
+            Place(box.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(340, 0), new Vector2(78, 40));
+            var mark = Pill(Child("On", box.rectTransform), Pink, 40);
+            Stretch(mark.rectTransform);
+            var knob = Pill(Child("Knob", box.rectTransform), Color.white, 30);
+            Place(knob.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(5, 0), new Vector2(30, 30));
+
+            var toggle = row.gameObject.AddComponent<Toggle>();
+            toggle.targetGraphic = box;
+            toggle.graphic = null;
+            toggle.navigation = new Navigation { mode = Navigation.Mode.None };
+            var sw = row.gameObject.AddComponent<VNSwitch>();
+            sw.onFill = mark;
+            sw.knob = knob.rectTransform;
+            sw.offX = 5;
+            sw.onX = 43;
+            return toggle;
+        }
+
+        // ───────────────────────── 도형 스프라이트 ─────────────────────────
 
         static void LoadResources()
         {
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            AssetDatabase.ImportAsset(RoundSpritePath);
-            round = AssetDatabase.LoadAssetAtPath<Sprite>(RoundSpritePath);
-            if (round == null) round = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
-            knob = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
-            check = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Checkmark.psd");
+            Directory.CreateDirectory(UIDir);
+            var c = new Vector2(64, 64);
+            var b63 = new Vector4(63, 63, 63, 63);
+
+            pill = MakeSprite("pill", 128, 128, (x, y) => Vector2.Distance(new Vector2(x, y), c) - 63f, b63);
+            pillLine = MakeSprite("pill_line_thin", 128, 128, (x, y) =>
+                Mathf.Abs(Vector2.Distance(new Vector2(x, y), c) - 60.5f) - 2.5f, b63);
+            arrow = MakeSprite("arrow", 128, 128, (x, y) =>
+            {
+                var p = new Vector2(x, y);
+                float d = Seg(p, new Vector2(22, 64), new Vector2(106, 64));
+                d = Mathf.Min(d, Seg(p, new Vector2(106, 64), new Vector2(74, 32)));
+                d = Mathf.Min(d, Seg(p, new Vector2(106, 64), new Vector2(74, 96)));
+                return d - 4.5f;
+            }, Vector4.zero);
+            heart = MakeSprite("heart", 128, 128, (x, y) =>
+            {
+                var p = new Vector2(x, y);
+                float d = Mathf.Min(Vector2.Distance(p, new Vector2(43, 80)) - 27f, Vector2.Distance(p, new Vector2(85, 80)) - 27f);
+                return Mathf.Min(d, Tri(p, new Vector2(19, 70), new Vector2(109, 70), new Vector2(64, 16)));
+            }, Vector4.zero);
+            sparkle = MakeSprite("sparkle", 128, 128, (x, y) =>
+            {
+                float dx = Mathf.Abs(x - 64), dy = Mathf.Abs(y - 64);
+                float d1 = (dx * 9 + dy * 60 - 60 * 9) / Mathf.Sqrt(60 * 60 + 9 * 9);
+                float d2 = (dx * 60 + dy * 9 - 60 * 9) / Mathf.Sqrt(60 * 60 + 9 * 9);
+                return Mathf.Min(d1, d2);
+            }, Vector4.zero);
+            xmark = MakeSprite("xmark", 128, 128, (x, y) =>
+            {
+                var p = new Vector2(x, y);
+                return Mathf.Min(Seg(p, new Vector2(30, 30), new Vector2(98, 98)), Seg(p, new Vector2(30, 98), new Vector2(98, 30))) - 7f;
+            }, Vector4.zero);
+
+            // 탭 아이콘 (선 두께 8)
+            iconSettings = MakeSprite("icon_settings", 128, 128, (x, y) =>
+            {
+                var p = new Vector2(x, y);
+                float[] ly = { 96, 64, 32 };
+                float[] kx = { 82, 44, 76 };
+                float d = 1e9f;
+                for (int i = 0; i < 3; i++) d = Mathf.Min(d, Seg(p, new Vector2(16, ly[i]), new Vector2(112, ly[i])) - 4f);
+                for (int i = 0; i < 3; i++)
+                {
+                    float cd = Vector2.Distance(p, new Vector2(kx[i], ly[i]));
+                    d = Mathf.Max(d, 9.5f - cd);                       // 동그라미 안쪽은 비움
+                    d = Mathf.Min(d, Mathf.Abs(cd - 13.5f) - 4f);      // 동그라미 테두리
+                }
+                return d;
+            }, Vector4.zero);
+            iconImage = MakeSprite("icon_image", 128, 128, (x, y) =>
+            {
+                var p = new Vector2(x, y);
+                float box = Mathf.Abs(RoundBox(p, c, new Vector2(50, 42), 12)) - 4f;
+                float m = Mathf.Min(Seg(p, new Vector2(24, 34), new Vector2(52, 66)), Seg(p, new Vector2(52, 66), new Vector2(68, 50)));
+                m = Mathf.Min(m, Seg(p, new Vector2(68, 50), new Vector2(82, 62)));
+                m = Mathf.Min(m, Seg(p, new Vector2(82, 62), new Vector2(104, 38))) - 4f;
+                float sun = Vector2.Distance(p, new Vector2(86, 86)) - 9f;
+                return Mathf.Min(box, Mathf.Min(m, sun));
+            }, Vector4.zero);
+            iconFolder = MakeSprite("icon_folder", 128, 128, (x, y) =>
+            {
+                var p = new Vector2(x, y);
+                float body = Mathf.Abs(RoundBox(p, new Vector2(64, 56), new Vector2(50, 36), 10)) - 4f;
+                float tab = Mathf.Abs(RoundBox(p, new Vector2(38, 94), new Vector2(24, 8), 6)) - 4f;
+                return Mathf.Min(body, Mathf.Max(tab, 90 - y));
+            }, Vector4.zero);
+            iconLog = MakeSprite("icon_log", 128, 128, (x, y) =>
+            {
+                var p = new Vector2(x, y);
+                float bubble = Mathf.Abs(RoundBox(p, new Vector2(64, 72), new Vector2(50, 36), 16)) - 4f;
+                float tail = Mathf.Min(Seg(p, new Vector2(42, 36), new Vector2(34, 18)), Seg(p, new Vector2(34, 18), new Vector2(60, 36))) - 4f;
+                float lines = Mathf.Min(Seg(p, new Vector2(40, 82), new Vector2(88, 82)), Seg(p, new Vector2(40, 62), new Vector2(74, 62))) - 4f;
+                return Mathf.Min(bubble, Mathf.Min(tail, lines));
+            }, Vector4.zero);
+        }
+
+        static float Seg(Vector2 p, Vector2 a, Vector2 b)
+        {
+            Vector2 pa = p - a, ba = b - a;
+            float h = Mathf.Clamp01(Vector2.Dot(pa, ba) / Vector2.Dot(ba, ba));
+            return (pa - ba * h).magnitude;
+        }
+
+        static float RoundBox(Vector2 p, Vector2 center, Vector2 half, float r)
+        {
+            Vector2 q = new Vector2(Mathf.Abs(p.x - center.x), Mathf.Abs(p.y - center.y)) - half + new Vector2(r, r);
+            return new Vector2(Mathf.Max(q.x, 0), Mathf.Max(q.y, 0)).magnitude + Mathf.Min(Mathf.Max(q.x, q.y), 0) - r;
+        }
+
+        /// <summary>삼각형 거리 함수 (안쪽 음수)</summary>
+        static float Tri(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
+        {
+            float d = Mathf.Min(Seg(p, a, b), Mathf.Min(Seg(p, b, c), Seg(p, c, a)));
+            float s1 = Cross(b - a, p - a), s2 = Cross(c - b, p - b), s3 = Cross(a - c, p - c);
+            bool inside = (s1 >= 0 && s2 >= 0 && s3 >= 0) || (s1 <= 0 && s2 <= 0 && s3 <= 0);
+            return inside ? -d : d;
+        }
+
+        static float Cross(Vector2 a, Vector2 b) => a.x * b.y - a.y * b.x;
+
+        /// <summary>거리 함수로 흰색 도형 PNG를 만들어 Assets/VN/UI/ 에 저장 (없을 때만)</summary>
+        static Sprite MakeSprite(string name, int w, int h, System.Func<float, float, float> sdf, Vector4 border)
+        {
+            string path = UIDir + name + ".png";
+            if (!File.Exists(path))
+            {
+                var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                var px = new Color32[w * h];
+                for (int y = 0; y < h; y++)
+                    for (int x = 0; x < w; x++)
+                    {
+                        float a = Mathf.Clamp01(0.5f - sdf(x + 0.5f, y + 0.5f));
+                        px[y * w + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255));
+                    }
+                tex.SetPixels32(px);
+                File.WriteAllBytes(path, tex.EncodeToPNG());
+                Object.DestroyImmediate(tex);
+                AssetDatabase.ImportAsset(path);
+            }
+
+            var ti = (TextureImporter)AssetImporter.GetAtPath(path);
+            if (ti.textureType != TextureImporterType.Sprite || ti.spriteBorder != border || ti.mipmapEnabled ||
+                ti.textureCompression != TextureImporterCompression.Uncompressed)
+            {
+                ti.textureType = TextureImporterType.Sprite;
+                ti.spriteImportMode = SpriteImportMode.Single;
+                ti.spriteBorder = border;
+                ti.mipmapEnabled = false;
+                ti.alphaIsTransparency = true;
+                ti.filterMode = FilterMode.Bilinear;
+                ti.textureCompression = TextureImporterCompression.Uncompressed;
+                ti.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        /// <summary>알약 (높이의 절반이 모서리 반지름). 정사각형이면 원</summary>
+        static Image Pill(RectTransform rt, Color color, float height, bool outline = false)
+        {
+            var img = Img(rt, color, outline ? pillLine : pill);
+            img.pixelsPerUnitMultiplier = 63f / (height * 0.5f);
+            return img;
+        }
+
+        /// <summary>모서리가 둥근 사각형</summary>
+        static Image Rounded(RectTransform rt, Color color, float radius)
+        {
+            var img = Img(rt, color, pill);
+            img.pixelsPerUnitMultiplier = 63f / radius;
+            return img;
+        }
+
+        /// <summary>모서리가 둥근 사각 테두리</summary>
+        static Image Ring(RectTransform rt, Color color, float radius)
+        {
+            var img = Img(rt, color, pillLine);
+            img.pixelsPerUnitMultiplier = 63f / radius;
+            return img;
+        }
+
+        static void AddDropShadow(Graphic g)
+        {
+            var s = g.gameObject.AddComponent<Shadow>();
+            s.effectColor = ShadowColor;
+            s.effectDistance = new Vector2(0, -4);
+        }
+
+        static void AddOutline(Graphic g, Color color, float dist)
+        {
+            var o = g.gameObject.AddComponent<Outline>();
+            o.effectColor = color;
+            o.effectDistance = new Vector2(dist, -dist);
+        }
+
+        static Color Hex(string hex)
+        {
+            ColorUtility.TryParseHtmlString("#" + hex, out var c);
+            return c;
         }
 
         static RectTransform Child(string name, Transform parent)
@@ -697,159 +1258,6 @@ namespace VN.EditorTools
             t.horizontalOverflow = HorizontalWrapMode.Wrap;
             t.verticalOverflow = VerticalWrapMode.Overflow;
             return t;
-        }
-
-        static void AddShadow(Graphic g)
-        {
-            var s = g.gameObject.AddComponent<Shadow>();
-            s.effectColor = new Color(0, 0, 0, 0.75f);
-            s.effectDistance = new Vector2(2, -2);
-        }
-
-        static Button MakeButton(Transform parent, string name, string label, int fontSize, Color normal, Color highlight)
-        {
-            var rt = Child(name, parent);
-            var img = Img(rt, Color.white, round);
-            img.raycastTarget = true;
-            var b = rt.gameObject.AddComponent<Button>();
-            b.targetGraphic = img;
-            b.navigation = new Navigation { mode = Navigation.Mode.None };
-            var cb = ColorBlock.defaultColorBlock;
-            cb.normalColor = normal;
-            cb.selectedColor = normal;
-            cb.highlightedColor = highlight;
-            cb.pressedColor = new Color(highlight.r * 0.8f, highlight.g * 0.8f, highlight.b * 0.8f, 1f);
-            cb.disabledColor = new Color(normal.r, normal.g, normal.b, 0.45f);
-            cb.fadeDuration = 0.08f;
-            b.colors = cb;
-
-            var t = Txt(rt, "Text", label, fontSize, TextAnchor.MiddleCenter, TextColor);
-            Stretch(t.rectTransform, 16, 6, 16, 6);
-            return b;
-        }
-
-        static Button QuickButton(Transform parent, string label)
-        {
-            var b = MakeButton(parent, label, label, 24, new Color(0, 0, 0, 0.45f), AccentDark);
-            var t = b.GetComponentInChildren<Text>();
-            t.horizontalOverflow = HorizontalWrapMode.Overflow;
-            Stretch(t.rectTransform);
-            var le = b.gameObject.AddComponent<LayoutElement>();
-            le.preferredWidth = 44 + label.Length * 24;
-            le.preferredHeight = 42;
-            return b;
-        }
-
-        static Button TitleButton(Transform parent, string label)
-        {
-            var b = MakeButton(parent, label, label, 36, new Color(0.1f, 0.08f, 0.16f, 0.82f), Accent);
-            b.GetComponentInChildren<Text>().alignment = TextAnchor.MiddleLeft;
-            Stretch(b.GetComponentInChildren<Text>().rectTransform, 44, 6, 16, 6);
-            b.gameObject.AddComponent<LayoutElement>().preferredHeight = 78;
-            return b;
-        }
-
-        static Button BottomButton(RectTransform win, string label)
-        {
-            var b = MakeButton(win, "Close", label, 32, ButtonColor, Accent);
-            Place((RectTransform)b.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(260, 70));
-            return b;
-        }
-
-        static RectTransform Modal(Transform root, string name, Vector2 size, out RectTransform window)
-        {
-            var rt = Child(name, root);
-            Stretch(rt);
-            Img(rt, DimColor).raycastTarget = true;
-
-            window = Child("Window", rt);
-            Place(window, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, size);
-            var w = Img(window, WindowColor, round);
-            w.raycastTarget = true;
-            var o = w.gameObject.AddComponent<Outline>();
-            o.effectColor = new Color(Accent.r, Accent.g, Accent.b, 0.5f);
-            o.effectDistance = new Vector2(2, -2);
-            return rt;
-        }
-
-        static Text Header(RectTransform win, string title)
-        {
-            var t = Txt(win, "Header", title, 46, TextAnchor.MiddleCenter, Accent, FontStyle.Bold);
-            Place(t.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -20), new Vector2(800, 80));
-            return t;
-        }
-
-        static Slider SliderRow(RectTransform win, string label, float y, float min, float max, bool whole, out Text valueText)
-        {
-            var row = Child(label, win);
-            row.anchorMin = new Vector2(0, 1);
-            row.anchorMax = new Vector2(1, 1);
-            row.pivot = new Vector2(0.5f, 1);
-            row.offsetMin = new Vector2(80, y - 70);
-            row.offsetMax = new Vector2(-80, y);
-
-            var l = Txt(row, "Label", label, 32, TextAnchor.MiddleLeft, TextColor);
-            Place(l.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), Vector2.zero, new Vector2(280, 60));
-
-            var sRt = Child("Slider", row);
-            Place(sRt, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(300, 0), new Vector2(480, 24));
-            var bg = Img(Child("Background", sRt), new Color(1, 1, 1, 0.12f), round);
-            bg.raycastTarget = true;
-            Stretch(bg.rectTransform);
-            var fillArea = Child("Fill Area", sRt);
-            Stretch(fillArea, 0, 0, 0, 0);
-            var fill = Img(Child("Fill", fillArea), Accent, round);
-            fill.rectTransform.anchorMin = Vector2.zero;
-            fill.rectTransform.anchorMax = new Vector2(0, 1);
-            fill.rectTransform.offsetMin = fill.rectTransform.offsetMax = Vector2.zero;
-            var handleArea = Child("Handle Slide Area", sRt);
-            Stretch(handleArea, 16, 0, 16, 0);
-            var handle = Img(Child("Handle", handleArea), Color.white, null);
-            handle.sprite = knob;
-            handle.raycastTarget = true;
-            handle.rectTransform.anchorMin = new Vector2(0, 0);
-            handle.rectTransform.anchorMax = new Vector2(0, 1);
-            handle.rectTransform.sizeDelta = new Vector2(40, 16);
-
-            var slider = sRt.gameObject.AddComponent<Slider>();
-            slider.fillRect = fill.rectTransform;
-            slider.handleRect = handle.rectTransform;
-            slider.targetGraphic = handle;
-            slider.direction = Slider.Direction.LeftToRight;
-            slider.minValue = min;
-            slider.maxValue = max;
-            slider.wholeNumbers = whole;
-            slider.navigation = new Navigation { mode = Navigation.Mode.None };
-
-            valueText = Txt(row, "Value", "", 28, TextAnchor.MiddleRight, new Color(1f, 0.85f, 0.92f));
-            Place(valueText.rectTransform, new Vector2(1, 0.5f), new Vector2(1, 0.5f), Vector2.zero, new Vector2(160, 60));
-            return slider;
-        }
-
-        static Toggle ToggleRow(RectTransform win, string label, float y)
-        {
-            var row = Child(label, win);
-            row.anchorMin = new Vector2(0, 1);
-            row.anchorMax = new Vector2(1, 1);
-            row.pivot = new Vector2(0.5f, 1);
-            row.offsetMin = new Vector2(80, y - 70);
-            row.offsetMax = new Vector2(-80, y);
-
-            var l = Txt(row, "Label", label, 32, TextAnchor.MiddleLeft, TextColor);
-            Place(l.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), Vector2.zero, new Vector2(280, 60));
-
-            var box = Img(Child("Box", row), new Color(1, 1, 1, 0.12f), round);
-            box.raycastTarget = true;
-            Place(box.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(300, 0), new Vector2(48, 48));
-            var mark = Img(Child("Checkmark", box.rectTransform), Accent);
-            mark.sprite = check;
-            Stretch(mark.rectTransform, 6, 6, 6, 6);
-
-            var toggle = row.gameObject.AddComponent<Toggle>();
-            toggle.targetGraphic = box;
-            toggle.graphic = mark;
-            toggle.navigation = new Navigation { mode = Navigation.Mode.None };
-            return toggle;
         }
     }
 }

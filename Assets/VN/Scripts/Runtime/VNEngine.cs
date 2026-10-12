@@ -129,13 +129,13 @@ namespace VN
 
             dialogue.quickSaveButton.onClick.AddListener(QuickSave);
             dialogue.quickLoadButton.onClick.AddListener(QuickLoad);
-            dialogue.saveButton.onClick.AddListener(() => saveLoadMenu.Open(true));
-            dialogue.loadButton.onClick.AddListener(() => saveLoadMenu.Open(false));
-            dialogue.logButton.onClick.AddListener(backlog.Open);
+            dialogue.saveButton.onClick.AddListener(() => OpenMenu(VNMenuKind.Save));
+            dialogue.loadButton.onClick.AddListener(() => OpenMenu(VNMenuKind.Load));
+            dialogue.logButton.onClick.AddListener(() => OpenMenu(VNMenuKind.Log));
             dialogue.autoButton.onClick.AddListener(ToggleAuto);
             dialogue.skipButton.onClick.AddListener(ToggleSkip);
             dialogue.statButton.onClick.AddListener(ToggleStats);
-            dialogue.configButton.onClick.AddListener(settingsMenu.Open);
+            dialogue.configButton.onClick.AddListener(() => OpenMenu(VNMenuKind.Settings));
             dialogue.titleButton.onClick.AddListener(() =>
                 confirmDialog.Show("타이틀 화면으로 돌아갈까요?\n저장하지 않은 진행 상황은 사라집니다.", ReturnToTitle));
 
@@ -144,9 +144,9 @@ namespace VN
                 if (modes.Length == 1) NewGame(0);
                 else titleMenu.OpenModeSelect(modes, NewGame);
             });
-            titleMenu.loadButton.onClick.AddListener(() => saveLoadMenu.Open(false));
-            titleMenu.galleryButton.onClick.AddListener(gallery.Open);
-            titleMenu.settingsButton.onClick.AddListener(settingsMenu.Open);
+            titleMenu.loadButton.onClick.AddListener(() => OpenMenu(VNMenuKind.Load));
+            titleMenu.galleryButton.onClick.AddListener(() => OpenMenu(VNMenuKind.Gallery));
+            titleMenu.settingsButton.onClick.AddListener(() => OpenMenu(VNMenuKind.Settings));
             titleMenu.quitButton.onClick.AddListener(() => confirmDialog.Show("게임을 종료할까요?", QuitGame));
         }
 
@@ -218,6 +218,23 @@ namespace VN
             skipToggle = !skipToggle;
             if (skipToggle) AutoMode = false;
             UpdateToggleVisuals();
+        }
+
+        /// <summary>메뉴 창 열기 (다른 메뉴 창은 닫음). 메뉴 왼쪽 탭에서도 사용</summary>
+        public void OpenMenu(VNMenuKind kind)
+        {
+            if (saveLoadMenu.IsOpen) saveLoadMenu.Close();
+            if (settingsMenu.IsOpen) settingsMenu.Close();
+            if (backlog.IsOpen) backlog.Close();
+            if (gallery.IsOpen) gallery.Close();
+            switch (kind)
+            {
+                case VNMenuKind.Save: if (InGame) saveLoadMenu.Open(true); break;
+                case VNMenuKind.Load: saveLoadMenu.Open(false); break;
+                case VNMenuKind.Log: if (InGame) backlog.Open(); break;
+                case VNMenuKind.Gallery: gallery.Open(); break;
+                case VNMenuKind.Settings: settingsMenu.Open(); break;
+            }
         }
 
         void ToggleStats()
