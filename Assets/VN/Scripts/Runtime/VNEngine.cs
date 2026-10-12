@@ -9,6 +9,23 @@ using UnityEngine.UI;
 
 namespace VN
 {
+    /// <summary>타이틀의 "새로 시작"에서 고르는 게임 모드</summary>
+    [Serializable]
+    public class VNGameMode
+    {
+        public string name;
+        [TextArea] public string description;
+        [Tooltip("이 모드를 고르면 실행할 스토리 파일 (Assets/Resources/Story/ 안의 .txt, 확장자 제외)")]
+        public string startScript;
+
+        public VNGameMode(string name, string description, string startScript)
+        {
+            this.name = name;
+            this.description = description;
+            this.startScript = startScript;
+        }
+    }
+
     /// <summary>
     /// 스토리 진행의 중심. 스토리 파일을 한 줄씩 실행하고, 입력/메뉴/세이브를 관리합니다.
     /// </summary>
@@ -17,9 +34,13 @@ namespace VN
         public static VNEngine Instance { get; private set; }
 
         [Header("시작 설정")]
-        [Tooltip("새 게임 시 실행할 스토리 파일 (Assets/Resources/Story/ 안의 .txt, 확장자 제외)")]
-        public string startScript = "start";
-        [Tooltip("비워두면 파일 처음부터. 테스트할 때 특정 라벨부터 시작하려면 입력")]
+        [Tooltip("새로 시작을 누르면 고를 수 있는 모드들")]
+        public VNGameMode[] modes =
+        {
+            new VNGameMode("승주를 꼬시기", "'나'가 되어, 말수 적은 승주의 마음을 얻어 보자.", "start"),
+            new VNGameMode("승주가 되기", "승주가 되어 보자. 친구 넷이 전부 나를 노린다?!", "harem_start"),
+        };
+        [Tooltip("비워두면 파일 처음부터. 테스트할 때 특정 라벨부터 시작하려면 입력 (모든 모드에 적용)")]
         public string startLabel = "";
         [Tooltip("타이틀 화면 BGM (Assets/Resources/Audio/BGM/). 비워두면 재생 안 함")]
         public string titleBgm = "";
@@ -43,12 +64,13 @@ namespace VN
         public VNBacklog backlog;
         public VNConfirmDialog confirmDialog;
         public VNAffectionHUD hud;
+        public VNGallery gallery;
 
         public bool InGame { get; private set; }
         public bool AutoMode { get; private set; }
         public bool SkipMode => skipToggle || skipHeld;
 
-        bool AnyMenuOpen => saveLoadMenu.IsOpen || settingsMenu.IsOpen || backlog.IsOpen || confirmDialog.IsOpen;
+        bool AnyMenuOpen => saveLoadMenu.IsOpen || settingsMenu.IsOpen || backlog.IsOpen || confirmDialog.IsOpen || gallery.IsOpen;
 
         VNScript script;
         int index;          // 다음에 실행할 줄
@@ -61,6 +83,7 @@ namespace VN
         bool endRequested;
         int choiceResult = -1;
         string lastSpeaker, lastText;
+        int modeIndex;
 
         static readonly Regex interpolateRegex = new Regex(@"\{([^{}|]+)\}");
         static readonly Regex genderRegex = new Regex(@"\{([^{}|]*)\|([^{}|]*)\}");
@@ -111,12 +134,18 @@ namespace VN
             dialogue.logButton.onClick.AddListener(backlog.Open);
             dialogue.autoButton.onClick.AddListener(ToggleAuto);
             dialogue.skipButton.onClick.AddListener(ToggleSkip);
+            dialogue.statButton.onClick.AddListener(ToggleStats);
             dialogue.configButton.onClick.AddListener(settingsMenu.Open);
             dialogue.titleButton.onClick.AddListener(() =>
                 confirmDialog.Show("타이틀 화면으로 돌아갈까요?\n저장하지 않은 진행 상황은 사라집니다.", ReturnToTitle));
 
-            titleMenu.newGameButton.onClick.AddListener(NewGame);
+            titleMenu.newGameButton.onClick.AddListener(() =>
+            {
+                if (modes.Length == 1) NewGame(0);
+                else titleMenu.OpenModeSelect(modes, NewGame);
+            });
             titleMenu.loadButton.onClick.AddListener(() => saveLoadMenu.Open(false));
+            titleMenu.galleryButton.onClick.AddListener(gallery.Open);
             titleMenu.settingsButton.onClick.AddListener(settingsMenu.Open);
             titleMenu.quitButton.onClick.AddListener(() => confirmDialog.Show("게임을 종료할까요?", QuitGame));
         }
@@ -141,6 +170,8 @@ namespace VN
 
             if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
                 OnScreenClick();
+            if (Input.GetKeyDown(KeyCode.S))
+                ToggleStats();
             if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.H))
                 SetUIHidden(!uiHidden);
             if (Input.mouseScrollDelta.y > 0f && !uiHidden)
@@ -157,9 +188,12 @@ namespace VN
         bool CloseTopMenu()
         {
             if (confirmDialog.IsOpen) { confirmDialog.Close(); return true; }
+            if (gallery.IsOpen && gallery.ViewerOpen) { gallery.CloseViewer(); return true; }
+            if (gallery.IsOpen) { gallery.Close(); return true; }
             if (backlog.IsOpen) { backlog.Close(); return true; }
             if (settingsMenu.IsOpen) { settingsMenu.Close(); return true; }
             if (saveLoadMenu.IsOpen) { saveLoadMenu.Close(); return true; }
+            if (titleMenu.ModeSelectOpen) { titleMenu.CloseModeSelect(); return true; }
             return false;
         }
 
@@ -169,6 +203,7 @@ namespace VN
             backlog.Close();
             settingsMenu.gameObject.SetActive(false);
             saveLoadMenu.Close();
+            gallery.Close();
         }
 
         void ToggleAuto()
@@ -185,10 +220,17 @@ namespace VN
             UpdateToggleVisuals();
         }
 
+        void ToggleStats()
+        {
+            hud.ToggleStats();
+            UpdateToggleVisuals();
+        }
+
         void UpdateToggleVisuals()
         {
             dialogue.SetToggle(dialogue.autoButton, AutoMode);
             dialogue.SetToggle(dialogue.skipButton, skipToggle);
+            dialogue.SetToggle(dialogue.statButton, hud.StatsOpen);
         }
 
         void SetUIHidden(bool hidden)
@@ -200,11 +242,13 @@ namespace VN
 
         // ───────────────────────── 게임 흐름 ─────────────────────────
 
-        public void NewGame()
+        public void NewGame(int mode)
         {
+            string startScript = modes[mode].startScript;
             var s = VNScript.Load(startScript);
             if (s == null) return;
             ResetGameState();
+            modeIndex = mode;
 
             int start = 0;
             if (!string.IsNullOrEmpty(startLabel) && !s.labels.TryGetValue(startLabel, out start))
@@ -249,7 +293,7 @@ namespace VN
             choiceMenu.Hide();
             hud.SetVisible(false);
             hud.SetDay("");
-            hud.Refresh(0, false);
+            hud.SetGauges(null);
             AutoMode = false;
             skipToggle = false;
             UpdateToggleVisuals();
@@ -385,9 +429,18 @@ namespace VN
                 {
                     float d = skip ? 0f : ArgFloat(a, 1, 0.5f);
                     if (a.Length == 0 || a[0] == "off") stage.HideCG(d);
-                    else stage.ShowCG(a[0], d);
+                    else
+                    {
+                        stage.ShowCG(a[0], d);
+                        VNUnlocks.UnlockCG(a[0]); // 갤러리에 해금
+                    }
                     return d;
                 }
+
+                case "ending":
+                    if (a.Length == 0) return Error(l, "사용법: @ending 엔딩 이름");
+                    VNUnlocks.UnlockEnding(string.Join(" ", a));
+                    return 0f;
                 case "bgm":
                     if (a.Length == 0 || a[0] == "off" || a[0] == "stop") audioPlayer.StopBgm(ArgFloat(a, 1, 1f));
                     else audioPlayer.PlayBgm(a[0]);
@@ -415,6 +468,10 @@ namespace VN
 
                 case "day":
                     hud.SetDay(string.Join(" ", a));
+                    return 0f;
+
+                case "gauge":
+                    hud.SetGauges(a);
                     return 0f;
 
                 case "hud":
@@ -473,11 +530,7 @@ namespace VN
             }
             int before = GetVariable(key);
             variables[key] = cur;
-            if (hud != null && key == hud.variableName)
-            {
-                hud.Refresh(cur, true);
-                hud.ShowDelta(cur - before);
-            }
+            hud.OnVariableChanged(key, before, cur);
         }
 
         void DoIf(VNLine l)
@@ -546,9 +599,13 @@ namespace VN
                 cg = stage.CurrentCG,
                 bgm = audioPlayer.CurrentBgm,
                 characters = stage.GetStates(),
+                speaker = stage.CurrentSpeaker,
                 savedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
                 dayLabel = hud.DayLabel,
                 hudVisible = hud.Visible,
+                gauges = hud.GaugeList,
+                modeName = modes[modeIndex].name,
+                startScript = modes[modeIndex].startScript,
                 preview = string.IsNullOrEmpty(lastSpeaker) ? lastText : $"{lastSpeaker}: {lastText}",
             };
             foreach (var kv in variables) d.variables.Add(new VNVariable { key = kv.Key, value = kv.Value });
@@ -574,14 +631,18 @@ namespace VN
             if (s == null) return;
 
             ResetGameState();
+            // 이름표 색(@color)은 보통 모드의 첫 파일에 있으므로 한 번 읽어 둠
+            if (!string.IsNullOrEmpty(d.startScript)) VNScript.Load(d.startScript);
+            modeIndex = Mathf.Max(0, Array.FindIndex(modes, m => m.startScript == d.startScript));
             foreach (var v in d.variables) variables[v.key] = v.value;
             stage.SetBackground(d.background, 0f);
             foreach (var c in d.characters) stage.ShowCharacter(c.name, c.expression, c.x, 0f);
+            stage.Focus(d.speaker);
             if (!string.IsNullOrEmpty(d.cg)) stage.ShowCG(d.cg, 0f);
             if (!string.IsNullOrEmpty(d.bgm)) audioPlayer.PlayBgm(d.bgm);
+            hud.SetGauges(string.IsNullOrEmpty(d.gauges) ? null : d.gauges.Split(' '));
             hud.SetDay(d.dayLabel);
             hud.SetVisible(d.hudVisible);
-            hud.Refresh(GetVariable(hud.variableName), false);
 
             CloseAllMenus();
             EnterGame();

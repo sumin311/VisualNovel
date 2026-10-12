@@ -42,7 +42,7 @@ namespace VN
 
         public static readonly HashSet<string> KnownCommands = new HashSet<string>
         {
-            "bg", "show", "hide", "cg", "bgm", "se", "wait", "jump", "set", "if", "end", "day", "hud"
+            "bg", "show", "hide", "cg", "bgm", "se", "wait", "jump", "set", "if", "end", "day", "hud", "gauge", "ending"
         };
 
         public string name;

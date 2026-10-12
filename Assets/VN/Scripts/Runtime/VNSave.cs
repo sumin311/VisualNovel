@@ -29,9 +29,13 @@ namespace VN
         public string cg;
         public string bgm;
         public List<VNCharacterState> characters = new List<VNCharacterState>();
+        public string speaker;      // 오른쪽에 크게 서 있던 화자
         public List<VNVariable> variables = new List<VNVariable>();
         public string dayLabel;
         public bool hudVisible;
+        public string gauges;       // 표시 중인 호감도 게이지 (공백 구분)
+        public string modeName;     // 게임 모드 이름 (슬롯 표시용)
+        public string startScript;  // 게임 모드의 첫 스토리 파일
         public string savedAt;
         public string preview;
     }
@@ -62,6 +66,27 @@ namespace VN
         public static void Delete(int slot)
         {
             if (Exists(slot)) File.Delete(PathOf(slot));
+        }
+    }
+
+    /// <summary>갤러리 해금 기록 (PlayerPrefs에 저장, 세이브와 별개라 새 게임을 해도 유지)</summary>
+    public static class VNUnlocks
+    {
+        public static bool HasCG(string name) => PlayerPrefs.GetInt("vn.cg." + name, 0) == 1;
+        public static bool HasEnding(string name) => PlayerPrefs.GetInt("vn.ending." + name, 0) == 1;
+
+        public static void UnlockCG(string name)
+        {
+            if (HasCG(name)) return;
+            PlayerPrefs.SetInt("vn.cg." + name, 1);
+            PlayerPrefs.Save();
+        }
+
+        public static void UnlockEnding(string name)
+        {
+            if (HasEnding(name)) return;
+            PlayerPrefs.SetInt("vn.ending." + name, 1);
+            PlayerPrefs.Save();
         }
     }
 

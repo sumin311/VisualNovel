@@ -41,7 +41,7 @@ namespace VN
                 var data = VNSaveSystem.Load(slot);
                 b.GetComponentInChildren<Text>().text = data == null
                     ? $"<b>No.{slot}</b>\n<color=#8a8aa0>- 비어 있음 -</color>"
-                    : $"<b>No.{slot}</b>    <color=#b8b8cc>{data.savedAt}</color>\n{Shorten(data.preview, 34)}";
+                    : $"<b>No.{slot}</b>    <color=#b8b8cc>{data.savedAt}</color>{(string.IsNullOrEmpty(data.modeName) ? "" : $"    <color=#ff8fb8>{data.modeName}</color>")}\n{Shorten(data.preview, 34)}";
                 b.interactable = saveMode || data != null;
                 int s = slot;
                 bool exists = data != null;

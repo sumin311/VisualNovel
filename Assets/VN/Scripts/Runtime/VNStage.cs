@@ -21,14 +21,31 @@ namespace VN
         public bool dimInactiveCharacters = true;
         public Color inactiveTint = new Color(0.6f, 0.6f, 0.65f, 1f);
 
+        [Header("화자 배치 (말하는 사람 = 오른쪽 크게, 나머지 = 왼쪽에 좌우반전)")]
+        [Tooltip("끄면 @show 에 적은 위치 그대로 표시")]
+        public bool speakerLayout = true;
+        [Tooltip("말하는 사람의 가로 위치 (0 = 왼쪽 끝, 1 = 오른쪽 끝)")]
+        public float speakerX = 0.74f;
+        [Tooltip("말하는 사람의 크기 배율")]
+        public float speakerScale = 1.05f;
+        [Tooltip("주변 사람들이 서는 구역 (가로 위치 시작~끝)")]
+        public float sideMinX = 0.08f;
+        public float sideMaxX = 0.40f;
+        [Tooltip("주변 사람들의 크기 배율")]
+        public float sideScale = 0.82f;
+        [Tooltip("주변 사람들을 좌우반전 (말하는 사람 쪽을 보도록)")]
+        public bool flipSide = true;
+
         public string CurrentBackground { get; private set; }
         public string CurrentCG { get; private set; }
+        /// <summary>오른쪽에 크게 서 있는 화자 (없으면 null)</summary>
+        public string CurrentSpeaker { get; private set; }
 
         class Character
         {
             public string name;
             public string expression;
-            public float x;
+            public float x;             // @show 로 정한 위치 (화자가 없을 때 사용)
             public Image image;
             public RectTransform rect;
             public Coroutine fade;
@@ -121,8 +138,7 @@ namespace VN
                 if (x.HasValue && !Mathf.Approximately(x.Value, c.x))
                 {
                     c.x = x.Value;
-                    if (c.move != null) StopCoroutine(c.move);
-                    c.move = StartCoroutine(Move(c, x.Value, fade > 0f ? 0.3f : 0f));
+                    Arrange(fade > 0f ? 0.3f : 0f);
                 }
                 return;
             }
@@ -146,8 +162,8 @@ namespace VN
             order.Add(name);
 
             ApplySprite(c);
-            PlaceAt(c, c.x);
             SetAlpha(c.image, 0f);
+            Arrange(fade > 0f ? 0.3f : 0f, c);
             c.fade = StartCoroutine(Fade(c.image, 0f, 1f, fade));
         }
 
@@ -162,8 +178,10 @@ namespace VN
             if (!characters.TryGetValue(name, out var c) || c.hiding) return;
             c.hiding = true;
             if (c.fade != null) StopCoroutine(c.fade);
-            if (fade <= 0f) { RemoveImmediate(c); return; }
-            c.fade = StartCoroutine(HideRoutine(c, fade));
+            if (name == CurrentSpeaker) CurrentSpeaker = null;
+            if (fade <= 0f) RemoveImmediate(c);
+            else c.fade = StartCoroutine(HideRoutine(c, fade));
+            Arrange(fade > 0f ? 0.3f : 0f);
         }
 
         public void HideAll(float fade)
@@ -171,16 +189,73 @@ namespace VN
             foreach (var n in order.ToArray()) HideCharacter(n, fade);
         }
 
-        /// <summary>말하는 캐릭터만 밝게, 나머지는 어둡게</summary>
+        /// <summary>
+        /// 대사가 나올 때마다 호출. 무대 위의 사람이 말하면 그 사람을 오른쪽에 크게 세우고
+        /// 나머지는 왼쪽으로. 나레이션이나 무대 밖 사람('나' 등)이 말하면 지금 배치를 유지.
+        /// </summary>
         public void Focus(string speaker)
         {
-            bool speakerOnStage = speaker != null && characters.ContainsKey(speaker);
-            foreach (var c in characters.Values)
+            if (speaker != null && characters.TryGetValue(speaker, out var c) && !c.hiding && speaker != CurrentSpeaker)
             {
-                Color tint = (!dimInactiveCharacters || !speakerOnStage || c.name == speaker) ? Color.white : inactiveTint;
-                tint.a = c.image.color.a;
-                c.image.color = tint;
+                CurrentSpeaker = speaker;
+                Arrange(0.25f);
             }
+        }
+
+        /// <summary>화자 배치 규칙에 따라 모든 캐릭터의 위치·크기·반전·밝기를 맞춤</summary>
+        /// <param name="instant">이 캐릭터는 애니메이션 없이 바로 제자리에 (새로 등장한 캐릭터)</param>
+        void Arrange(float d, Character instant = null)
+        {
+            var active = new List<Character>();
+            foreach (var n in order)
+                if (!characters[n].hiding) active.Add(characters[n]);
+
+            bool useSpeaker = speakerLayout && CurrentSpeaker != null &&
+                              characters.TryGetValue(CurrentSpeaker, out var sp) && !sp.hiding;
+
+            var side = new List<Character>();
+            foreach (var c in active)
+                if (!useSpeaker || c.name != CurrentSpeaker) side.Add(c);
+
+            for (int i = 0; i < side.Count; i++)
+            {
+                var c = side[i];
+                if (useSpeaker)
+                {
+                    float x = side.Count == 1 ? (sideMinX + sideMaxX) * 0.5f
+                                              : Mathf.Lerp(sideMinX, sideMaxX, (float)i / (side.Count - 1));
+                    MoveTo(c, x, flipSide ? -sideScale : sideScale, sideScale, c == instant ? 0f : d);
+                    SetTint(c, dimInactiveCharacters ? inactiveTint : Color.white);
+                }
+                else
+                {
+                    MoveTo(c, c.x, 1f, 1f, c == instant ? 0f : d);
+                    SetTint(c, Color.white);
+                }
+                c.rect.SetAsLastSibling();
+            }
+
+            if (useSpeaker)
+            {
+                var s = characters[CurrentSpeaker];
+                MoveTo(s, speakerX, speakerScale, speakerScale, s == instant ? 0f : d);
+                SetTint(s, Color.white);
+                s.rect.SetAsLastSibling(); // 화자를 맨 앞에
+            }
+        }
+
+        void MoveTo(Character c, float x, float scaleX, float scaleY, float d)
+        {
+            if (c.move != null) StopCoroutine(c.move);
+            c.move = null;
+            if (d <= 0f || !isActiveAndEnabled) { Place(c, x, scaleX, scaleY); return; }
+            c.move = StartCoroutine(Move(c, x, scaleX, scaleY, d));
+        }
+
+        static void SetTint(Character c, Color tint)
+        {
+            tint.a = c.image.color.a;
+            c.image.color = tint;
         }
 
         public List<VNCharacterState> GetStates()
@@ -207,22 +282,25 @@ namespace VN
             c.rect.sizeDelta = new Vector2(characterHeight * aspect, characterHeight);
         }
 
-        static void PlaceAt(Character c, float x)
+        static void Place(Character c, float x, float scaleX, float scaleY)
         {
             c.rect.anchorMin = c.rect.anchorMax = new Vector2(x, 0f);
             c.rect.pivot = new Vector2(0.5f, 0f);
             c.rect.anchoredPosition = Vector2.zero;
+            c.rect.localScale = new Vector3(scaleX, scaleY, 1f);
         }
 
-        IEnumerator Move(Character c, float to, float d)
+        IEnumerator Move(Character c, float toX, float toScaleX, float toScaleY, float d)
         {
-            float from = c.rect.anchorMin.x;
+            float fromX = c.rect.anchorMin.x;
+            Vector3 fromScale = c.rect.localScale;
             for (float t = 0f; t < d; t += Time.deltaTime)
             {
-                PlaceAt(c, Mathf.Lerp(from, to, Mathf.SmoothStep(0f, 1f, t / d)));
+                float k = Mathf.SmoothStep(0f, 1f, t / d);
+                Place(c, Mathf.Lerp(fromX, toX, k), Mathf.Lerp(fromScale.x, toScaleX, k), Mathf.Lerp(fromScale.y, toScaleY, k));
                 yield return null;
             }
-            PlaceAt(c, to);
+            Place(c, toX, toScaleX, toScaleY);
             c.move = null;
         }
 
@@ -278,6 +356,7 @@ namespace VN
         public void ClearAll()
         {
             foreach (var n in order.ToArray()) RemoveImmediate(characters[n]);
+            CurrentSpeaker = null;
             SetBackground(null, 0f);
             HideCG(0f);
         }

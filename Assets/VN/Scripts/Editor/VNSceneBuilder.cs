@@ -106,11 +106,13 @@ namespace VN.EditorTools
             engine.saveLoadMenu = BuildSaveLoad(root);
             engine.settingsMenu = BuildSettings(root);
             engine.backlog = BuildBacklog(root);
+            engine.gallery = BuildGallery(root);
             engine.confirmDialog = BuildConfirm(root);
 
             engine.saveLoadMenu.gameObject.SetActive(false);
             engine.settingsMenu.gameObject.SetActive(false);
             engine.backlog.gameObject.SetActive(false);
+            engine.gallery.gameObject.SetActive(false);
             engine.confirmDialog.gameObject.SetActive(false);
             engine.gameUI.SetActive(false);
 
@@ -212,12 +214,13 @@ namespace VN.EditorTools
             Place(next.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-40, 24), new Vector2(40, 40));
             box.nextIndicator = next;
 
-            // 퀵 메뉴 (대사창 오른쪽 위)
-            var qm = Child("QuickMenu", boxRt);
-            Place(qm, new Vector2(1, 1), new Vector2(1, 0), new Vector2(-24, 8), new Vector2(1300, 42));
+            // 퀵 메뉴 (화면 왼쪽 위 — 오른쪽 위는 날짜/스탯창 자리)
+            var qm = Child("QuickMenu", gameUI);
+            Place(qm, new Vector2(0, 1), new Vector2(0, 1), new Vector2(36, -34), new Vector2(1250, 44));
+            box.quickMenu = qm.gameObject;
             var qhl = qm.gameObject.AddComponent<HorizontalLayoutGroup>();
             qhl.spacing = 6;
-            qhl.childAlignment = TextAnchor.LowerRight;
+            qhl.childAlignment = TextAnchor.MiddleLeft;
             qhl.childControlWidth = qhl.childControlHeight = true;
             qhl.childForceExpandWidth = qhl.childForceExpandHeight = false;
             box.quickSaveButton = QuickButton(qm, "Q.저장");
@@ -227,6 +230,7 @@ namespace VN.EditorTools
             box.logButton = QuickButton(qm, "로그");
             box.autoButton = QuickButton(qm, "오토");
             box.skipButton = QuickButton(qm, "스킵");
+            box.statButton = QuickButton(qm, "스탯");
             box.configButton = QuickButton(qm, "설정");
             box.titleButton = QuickButton(qm, "타이틀");
 
@@ -234,7 +238,7 @@ namespace VN.EditorTools
 
             // 알림 문구 (저장 완료 등)
             var notice = Txt(gameUI, "Notice", "", 32, TextAnchor.MiddleCenter, TextColor);
-            Place(notice.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -48), new Vector2(900, 60));
+            Place(notice.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -110), new Vector2(900, 60));
             AddShadow(notice);
             notice.gameObject.SetActive(false);
             box.noticeText = notice;
@@ -259,6 +263,7 @@ namespace VN.EditorTools
             choice.optionTemplate = template;
             choiceRt.gameObject.SetActive(false);
             engine.choiceMenu = choice;
+            qm.SetAsLastSibling(); // 선택지가 떠 있어도 저장 등을 누를 수 있게
         }
 
         static VNAffectionHUD BuildHUD(Transform parent)
@@ -266,26 +271,36 @@ namespace VN.EditorTools
             var root = Child("AffectionHUD", parent);
             Stretch(root);
             var hud = root.gameObject.AddComponent<VNAffectionHUD>();
+            var topRight = new Vector2(1, 1);
 
+            // 날짜 (오른쪽 위, 항상 표시)
+            var chip = Child("DayChip", root);
+            Place(chip, topRight, topRight, new Vector2(-36, -30), new Vector2(520, 52));
+            Img(chip, PanelColor, round);
+            var co = chip.gameObject.AddComponent<Outline>();
+            co.effectColor = new Color(Accent.r, Accent.g, Accent.b, 0.35f);
+            co.effectDistance = new Vector2(2, -2);
+            hud.dayChip = chip.gameObject;
+            hud.dayText = Txt(chip, "Day", "1일차", 26, TextAnchor.MiddleRight, new Color(1f, 0.85f, 0.92f));
+            Stretch(hud.dayText.rectTransform, 24, 0, 24, 0);
+
+            // 스탯창 — 게이지 1개
             var panel = Child("Panel", root);
-            Place(panel, new Vector2(0, 1), new Vector2(0, 1), new Vector2(36, -30), new Vector2(560, 150));
+            Place(panel, topRight, topRight, new Vector2(-36, -92), new Vector2(520, 110));
             Img(panel, PanelColor, round);
             var o = panel.gameObject.AddComponent<Outline>();
             o.effectColor = new Color(Accent.r, Accent.g, Accent.b, 0.35f);
             o.effectDistance = new Vector2(2, -2);
             hud.panel = panel.gameObject;
 
-            hud.dayText = Txt(panel, "Day", "1일차", 26, TextAnchor.MiddleLeft, new Color(1f, 0.85f, 0.92f));
-            Place(hud.dayText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(28, -12), new Vector2(504, 36));
-
             hud.nameText = Txt(panel, "Name", "♥ 승주", 30, TextAnchor.MiddleLeft, Accent, FontStyle.Bold);
-            Place(hud.nameText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(28, -52), new Vector2(240, 40));
+            Place(hud.nameText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(28, -12), new Vector2(240, 40));
 
             hud.stageText = Txt(panel, "Stage", "그냥 친구", 24, TextAnchor.MiddleRight, TextColor);
-            Place(hud.stageText.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-28, -52), new Vector2(280, 40));
+            Place(hud.stageText.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-28, -12), new Vector2(280, 40));
 
             var gaugeBg = Img(Child("Gauge", panel), new Color(1, 1, 1, 0.12f), round);
-            Place(gaugeBg.rectTransform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(28, 20), new Vector2(370, 26));
+            Place(gaugeBg.rectTransform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(28, 20), new Vector2(330, 26));
             hud.gaugeFill = Img(Child("Fill", gaugeBg.rectTransform), Accent, round);
             var fillRt = hud.gaugeFill.rectTransform;
             fillRt.anchorMin = Vector2.zero;
@@ -295,12 +310,53 @@ namespace VN.EditorTools
             hud.valueText = Txt(panel, "Value", "0 / 100", 24, TextAnchor.MiddleRight, TextColor);
             Place(hud.valueText.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-28, 14), new Vector2(130, 36));
 
-            hud.deltaText = Txt(panel, "Delta", "♥ +10", 34, TextAnchor.MiddleLeft, Accent, FontStyle.Bold);
-            Place(hud.deltaText.rectTransform, new Vector2(1, 0.5f), new Vector2(0, 0.5f), new Vector2(18, 0), new Vector2(220, 50));
+            // +10 알림은 스탯창 왼쪽에
+            hud.deltaText = Txt(panel, "Delta", "♥ +10", 34, TextAnchor.MiddleRight, Accent, FontStyle.Bold);
+            Place(hud.deltaText.rectTransform, new Vector2(0, 0.5f), new Vector2(1, 0.5f), new Vector2(-18, 0), new Vector2(220, 50));
             AddShadow(hud.deltaText);
             hud.deltaText.gameObject.SetActive(false);
 
             panel.gameObject.SetActive(false);
+
+            // 스탯창 — 게이지 여러 개 (@gauge 승현 서연 기주 수민). 줄 수에 맞게 패널이 늘어남
+            var multi = Child("MultiPanel", root);
+            multi.anchorMin = multi.anchorMax = multi.pivot = topRight;
+            multi.anchoredPosition = new Vector2(-36, -92);
+            multi.sizeDelta = new Vector2(520, 0);
+            Img(multi, PanelColor, round);
+            var mo = multi.gameObject.AddComponent<Outline>();
+            mo.effectColor = new Color(Accent.r, Accent.g, Accent.b, 0.35f);
+            mo.effectDistance = new Vector2(2, -2);
+            var mvl = multi.gameObject.AddComponent<VerticalLayoutGroup>();
+            mvl.padding = new RectOffset(28, 28, 14, 14);
+            mvl.spacing = 6;
+            mvl.childControlWidth = mvl.childControlHeight = true;
+            mvl.childForceExpandWidth = true;
+            mvl.childForceExpandHeight = false;
+            multi.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            hud.multiPanel = multi.gameObject;
+
+            var row = Child("RowTemplate", multi);
+            row.gameObject.AddComponent<LayoutElement>().preferredHeight = 38;
+            var rowName = Txt(row, "Name", "♥ 이름", 26, TextAnchor.MiddleLeft, Accent, FontStyle.Bold);
+            Place(rowName.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), Vector2.zero, new Vector2(130, 38));
+            var rowGauge = Img(Child("Gauge", row), new Color(1, 1, 1, 0.12f), round);
+            Place(rowGauge.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(136, 0), new Vector2(250, 20));
+            var rowFill = Img(Child("Fill", rowGauge.rectTransform), Accent, round);
+            rowFill.rectTransform.anchorMin = Vector2.zero;
+            rowFill.rectTransform.anchorMax = new Vector2(0.2f, 1);
+            rowFill.rectTransform.offsetMin = rowFill.rectTransform.offsetMax = Vector2.zero;
+            var rowValue = Txt(row, "Value", "0", 24, TextAnchor.MiddleRight, TextColor);
+            Place(rowValue.rectTransform, new Vector2(1, 0.5f), new Vector2(1, 0.5f), Vector2.zero, new Vector2(70, 38));
+            var rowDelta = Txt(row, "Delta", "♥ +10", 28, TextAnchor.MiddleRight, Accent, FontStyle.Bold);
+            Place(rowDelta.rectTransform, new Vector2(0, 0.5f), new Vector2(1, 0.5f), new Vector2(-46, 0), new Vector2(200, 40));
+            AddShadow(rowDelta);
+            rowDelta.gameObject.SetActive(false);
+            row.gameObject.SetActive(false);
+            hud.rowTemplate = row.gameObject;
+
+            multi.gameObject.SetActive(false);
+            chip.gameObject.SetActive(false);
             return hud;
         }
 
@@ -330,7 +386,7 @@ namespace VN.EditorTools
             AddShadow(title.subtitleText);
 
             var buttons = Child("Buttons", rt);
-            Place(buttons, Vector2.zero, Vector2.zero, new Vector2(120, 130), new Vector2(460, 420));
+            Place(buttons, Vector2.zero, Vector2.zero, new Vector2(120, 110), new Vector2(460, 500));
             var vl = buttons.gameObject.AddComponent<VerticalLayoutGroup>();
             vl.spacing = 20;
             vl.childAlignment = TextAnchor.LowerLeft;
@@ -339,11 +395,36 @@ namespace VN.EditorTools
             vl.childForceExpandHeight = false;
             title.newGameButton = TitleButton(buttons, "새로 시작");
             title.loadButton = TitleButton(buttons, "불러오기");
+            title.galleryButton = TitleButton(buttons, "갤러리");
             title.settingsButton = TitleButton(buttons, "환경 설정");
             title.quitButton = TitleButton(buttons, "종료");
 
-            var ver = Txt(rt, "Version", "v0.1", 24, TextAnchor.LowerRight, new Color(1, 1, 1, 0.6f));
+            var ver = Txt(rt, "Version", "v0.2", 24, TextAnchor.LowerRight, new Color(1, 1, 1, 0.6f));
             Place(ver.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-30, 20), new Vector2(300, 40));
+
+            // 모드 선택 창 (새로 시작 → 모드 고르기). 버튼은 VNEngine.modes 로 자동 생성
+            var modeRt = Modal(rt, "ModeSelect", new Vector2(1100, 640), out var win);
+            Header(win, "모드 선택");
+            var list = Child("Modes", win);
+            Stretch(list, 60, 130, 60, 120);
+            var mvl = list.gameObject.AddComponent<VerticalLayoutGroup>();
+            mvl.spacing = 24;
+            mvl.childAlignment = TextAnchor.MiddleCenter;
+            mvl.childControlWidth = mvl.childControlHeight = true;
+            mvl.childForceExpandWidth = true;
+            mvl.childForceExpandHeight = false;
+            var modeBtn = MakeButton(list, "ModeTemplate", "모드", 40, ButtonColor, AccentDark);
+            var modeLabel = modeBtn.GetComponentInChildren<Text>();
+            modeLabel.alignment = TextAnchor.MiddleLeft;
+            modeLabel.lineSpacing = 1.2f;
+            Stretch(modeLabel.rectTransform, 48, 10, 32, 10);
+            modeBtn.gameObject.AddComponent<LayoutElement>().preferredHeight = 150;
+            modeBtn.gameObject.SetActive(false);
+            title.modePanel = modeRt.gameObject;
+            title.modeContainer = list;
+            title.modeTemplate = modeBtn;
+            title.modeBackButton = BottomButton(win, "뒤로");
+            modeRt.gameObject.SetActive(false);
             return title;
         }
 
@@ -455,6 +536,85 @@ namespace VN.EditorTools
 
             log.closeButton = BottomButton(win, "닫기");
             return log;
+        }
+
+        static VNGallery BuildGallery(Transform root)
+        {
+            var rt = Modal(root, "Gallery", new Vector2(1560, 900), out var win);
+            var gal = rt.gameObject.AddComponent<VNGallery>();
+            Header(win, "갤러리");
+
+            // 탭 (CG / 엔딩)
+            var tabs = Child("Tabs", win);
+            Place(tabs, new Vector2(0, 1), new Vector2(0, 1), new Vector2(50, -36), new Vector2(320, 56));
+            var thl = tabs.gameObject.AddComponent<HorizontalLayoutGroup>();
+            thl.spacing = 12;
+            thl.childControlWidth = thl.childControlHeight = true;
+            thl.childForceExpandWidth = thl.childForceExpandHeight = true;
+            gal.cgTabButton = MakeButton(tabs, "CGTab", "CG", 30, ButtonColor, AccentDark);
+            gal.endingTabButton = MakeButton(tabs, "EndingTab", "엔딩", 30, ButtonColor, AccentDark);
+
+            gal.countText = Txt(win, "Count", "0 / 0", 28, TextAnchor.MiddleRight, new Color(1f, 0.85f, 0.92f));
+            Place(gal.countText.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-50, -36), new Vector2(300, 56));
+
+            // CG 페이지 — 4칸씩 썸네일
+            var cgPage = Child("CGPage", win);
+            Stretch(cgPage, 50, 130, 50, 120);
+            gal.cgPage = cgPage.gameObject;
+            var grid = cgPage.gameObject.AddComponent<GridLayoutGroup>();
+            grid.cellSize = new Vector2(352, 220);
+            grid.spacing = new Vector2(20, 20);
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = 4;
+            grid.childAlignment = TextAnchor.UpperCenter;
+            gal.cgContainer = cgPage;
+
+            var slot = MakeButton(cgPage, "SlotTemplate", "?", 60, SlotColor, AccentDark);
+            var slotLabel = slot.GetComponentInChildren<Text>();
+            slotLabel.gameObject.name = "Label";
+            var thumb = Img(Child("Thumb", slot.transform), Color.white);
+            Stretch(thumb.rectTransform, 8, 44, 8, 8);
+            thumb.preserveAspect = true;
+            thumb.transform.SetSiblingIndex(0);
+            slotLabel.fontSize = 26;
+            slotLabel.alignment = TextAnchor.LowerCenter;
+            Stretch(slotLabel.rectTransform, 8, 6, 8, 6);
+            slot.gameObject.SetActive(false);
+            gal.cgSlotTemplate = slot;
+
+            // 엔딩 페이지 — 목록
+            var endPage = Child("EndingPage", win);
+            Stretch(endPage, 80, 130, 80, 120);
+            gal.endingPage = endPage.gameObject;
+            var vl = endPage.gameObject.AddComponent<VerticalLayoutGroup>();
+            vl.spacing = 10;
+            vl.childAlignment = TextAnchor.UpperLeft;
+            vl.childControlWidth = vl.childControlHeight = true;
+            vl.childForceExpandWidth = true;
+            vl.childForceExpandHeight = false;
+            gal.endingContainer = endPage;
+            var row = Txt(endPage, "RowTemplate", "♥ 엔딩", 32, TextAnchor.MiddleLeft, TextColor);
+            row.gameObject.AddComponent<LayoutElement>().preferredHeight = 50;
+            row.gameObject.SetActive(false);
+            gal.endingRowTemplate = row;
+            endPage.gameObject.SetActive(false);
+
+            gal.closeButton = BottomButton(win, "닫기");
+
+            // CG 크게 보기 (클릭하면 닫힘)
+            var viewer = Child("Viewer", rt);
+            Stretch(viewer);
+            var vbg = Img(viewer, Color.black);
+            vbg.raycastTarget = true;
+            var vbtn = viewer.gameObject.AddComponent<Button>();
+            vbtn.transition = Selectable.Transition.None;
+            vbtn.navigation = new Navigation { mode = Navigation.Mode.None };
+            gal.viewerImage = Img(Child("Image", viewer), Color.white);
+            Stretch(gal.viewerImage.rectTransform);
+            gal.viewerImage.preserveAspect = true;
+            viewer.gameObject.SetActive(false);
+            gal.viewer = viewer.gameObject;
+            return gal;
         }
 
         static VNConfirmDialog BuildConfirm(Transform root)

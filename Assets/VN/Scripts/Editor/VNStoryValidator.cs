@@ -16,7 +16,7 @@ namespace VN.EditorTools
         {
             public Dictionary<string, VNScript> scripts;
             public Dictionary<string, TextAsset> assets;
-            public int errors, warnings;
+            public int errors, warnings, todos;
         }
 
         [MenuItem("VN/스토리 파일 검사", priority = 1)]
@@ -25,8 +25,8 @@ namespace VN.EditorTools
             var ctx = Validate();
             EditorUtility.DisplayDialog("스토리 파일 검사",
                 ctx.errors == 0 && ctx.warnings == 0
-                    ? $"문제 없음! (파일 {ctx.scripts.Count}개)"
-                    : $"오류 {ctx.errors}개, 경고 {ctx.warnings}개\n자세한 내용은 Console 창을 확인하세요.\n(항목을 클릭하면 해당 파일이 선택됩니다)",
+                    ? $"문제 없음! (파일 {ctx.scripts.Count}개)\n대사 작성 필요([작성]): {ctx.todos}곳"
+                    : $"오류 {ctx.errors}개, 경고 {ctx.warnings}개\n대사 작성 필요([작성]): {ctx.todos}곳\n자세한 내용은 Console 창을 확인하세요.\n(항목을 클릭하면 해당 파일이 선택됩니다)",
                 "확인");
         }
 
@@ -63,6 +63,7 @@ namespace VN.EditorTools
                     switch (l.type)
                     {
                         case VNLineType.Dialogue:
+                            if (l.text != null && l.text.Contains("[작성]")) ctx.todos++;
                             if (l.speaker != null && !string.IsNullOrEmpty(l.expression))
                                 CheckCharacter(ctx, s, l, l.speaker, l.expression);
                             break;
@@ -79,7 +80,7 @@ namespace VN.EditorTools
                 }
             }
 
-            Debug.Log($"[VN 검사] 스토리 파일 {ctx.scripts.Count}개 검사 완료 — 오류 {ctx.errors}개, 경고 {ctx.warnings}개");
+            Debug.Log($"[VN 검사] 스토리 파일 {ctx.scripts.Count}개 검사 완료 — 오류 {ctx.errors}개, 경고 {ctx.warnings}개, 대사 작성 필요([작성]) {ctx.todos}곳");
             return ctx;
         }
 
@@ -126,6 +127,9 @@ namespace VN.EditorTools
                     else CheckTarget(ctx, s, l, joined.Substring(arrow + 2).Trim());
                     break;
                 }
+                case "ending":
+                    if (a0 == null) Error(ctx, s, l, "@ending 뒤에 엔딩 이름이 필요합니다.");
+                    break;
                 case "set":
                     if (a.Length == 0) Error(ctx, s, l, "사용법: @set 변수 = 값");
                     break;
@@ -192,6 +196,26 @@ namespace VN.EditorTools
             if (!EditorUtility.DisplayDialog("세이브 삭제", "모든 세이브 파일을 삭제할까요?", "삭제", "취소")) return;
             for (int i = 0; i <= VNSaveSystem.SlotCount; i++) VNSaveSystem.Delete(i);
             Debug.Log("[VN] 세이브 데이터를 삭제했습니다.");
+        }
+
+        [MenuItem("VN/갤러리 전부 해금 (테스트용)", priority = 42)]
+        static void UnlockAll() => SetAllUnlocks(true);
+
+        [MenuItem("VN/갤러리 해금 초기화", priority = 43)]
+        static void ResetUnlocks()
+        {
+            if (!EditorUtility.DisplayDialog("갤러리 초기화", "해금된 CG와 엔딩 기록을 모두 지울까요?", "초기화", "취소")) return;
+            SetAllUnlocks(false);
+        }
+
+        static void SetAllUnlocks(bool unlocked)
+        {
+            foreach (var t in Resources.LoadAll<Texture2D>("CG"))
+                if (unlocked) VNUnlocks.UnlockCG(t.name); else PlayerPrefs.DeleteKey("vn.cg." + t.name);
+            foreach (var e in VNGallery.AllEndings())
+                if (unlocked) VNUnlocks.UnlockEnding(e); else PlayerPrefs.DeleteKey("vn.ending." + e);
+            PlayerPrefs.Save();
+            Debug.Log(unlocked ? "[VN] 갤러리를 전부 해금했습니다." : "[VN] 갤러리 해금 기록을 지웠습니다.");
         }
     }
 }
