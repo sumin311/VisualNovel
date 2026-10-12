@@ -34,6 +34,8 @@ namespace VN
         public Button statButton;
         public Button configButton;
         public Button titleButton;
+        [Tooltip("대사창 숨기기 (폰에서는 오른쪽 클릭/H 키가 없어서 버튼으로)")]
+        public Button hideButton;
 
         [Header("오토/스킵 켜짐 표시 색")]
         public Color toggleOnColor = new Color(1f, 0.45f, 0f);

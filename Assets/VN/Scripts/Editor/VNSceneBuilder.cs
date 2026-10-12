@@ -36,6 +36,9 @@ namespace VN.EditorTools
         static readonly Color ShadowColor = new Color(0.35f, 0.18f, 0.2f, 0.16f);
 
         static Font font;
+        static Font uiFontAsset, dialogueFontAsset;
+        const string UIFontPath = "Assets/Fonts/Griun_Yeeun-Rg.ttf";
+        const string DialogueFontPath = "Assets/Fonts/NanumBarunpenB.ttf";
         static Sprite pill, pillLine, arrow, heart, sparkle, xmark;
         static Sprite iconSettings, iconImage, iconFolder, iconLog;
 
@@ -88,6 +91,8 @@ namespace VN.EditorTools
             // 엔진
             var vnGo = new GameObject("VN");
             var engine = vnGo.AddComponent<VNEngine>();
+            engine.uiFont = uiFontAsset;
+            engine.dialogueFont = dialogueFontAsset;
             var audio = vnGo.AddComponent<VNAudio>();
             audio.bgmSource = new GameObject("BGM").AddComponent<AudioSource>();
             audio.bgmSource.transform.SetParent(vnGo.transform);
@@ -117,6 +122,7 @@ namespace VN.EditorTools
             engine.backlog = BuildBacklog(root);
             engine.gallery = BuildGallery(root);
             engine.confirmDialog = BuildConfirm(root);
+            BuildRotateHint(root);
 
             engine.saveLoadMenu.gameObject.SetActive(false);
             engine.settingsMenu.gameObject.SetActive(false);
@@ -132,6 +138,12 @@ namespace VN.EditorTools
             PlayerSettings.defaultScreenWidth = 1600;
             PlayerSettings.defaultScreenHeight = 900;
             PlayerSettings.resizableWindow = true;
+            // 폰 앱으로 만들 때는 가로 화면 고정
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
+            PlayerSettings.allowedAutorotateToPortrait = false;
+            PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
+            PlayerSettings.allowedAutorotateToLandscapeLeft = true;
+            PlayerSettings.allowedAutorotateToLandscapeRight = true;
 
             AssetDatabase.SaveAssets();
             Debug.Log("[VN] 메인 씬 생성 완료: " + ScenePath);
@@ -164,6 +176,7 @@ namespace VN.EditorTools
             var gameUI = Child("GameUI", root);
             Stretch(gameUI);
             engine.gameUI = gameUI.gameObject;
+            gameUI.gameObject.AddComponent<VNSafeArea>();
 
             // 화면 클릭 = 다음 대사
             var catcherImg = Img(Child("ClickCatcher", gameUI), new Color(0, 0, 0, 0));
@@ -183,6 +196,7 @@ namespace VN.EditorTools
             boxRt.offsetMax = new Vector2(-90, 300);
             var box = boxRt.gameObject.AddComponent<VNDialogueBox>();
             box.canvasGroup = boxRt.gameObject.AddComponent<CanvasGroup>();
+            boxRt.gameObject.AddComponent<VNPlatformAdjust>().mobileTextScale = 1.12f;
             box.toggleOnColor = PinkDeep;
             box.toggleOffColor = Brown;
             box.darkText = Brown;
@@ -222,6 +236,7 @@ namespace VN.EditorTools
             box.bodyText = Txt(boxRt, "Body", "여기에 대사가 표시됩니다.", 34, TextAnchor.UpperLeft, Brown);
             Stretch(box.bodyText.rectTransform, 84, 44, 84, 60);
             box.bodyText.lineSpacing = 1.3f;
+            DialogueFont(box.bodyText);
 
             // 다음 대사 표시 = 분홍 동그라미 + 아래 화살표
             var next = Child("NextIndicator", boxRt);
@@ -252,6 +267,8 @@ namespace VN.EditorTools
             box.statButton = QuickButton(qm, "스탯");
             box.configButton = QuickButton(qm, "설정");
             box.titleButton = QuickButton(qm, "타이틀");
+            box.hideButton = QuickButton(qm, "숨기기");
+            qm.gameObject.AddComponent<VNPlatformAdjust>().mobileScale = 1.2f;
 
             engine.hud = BuildHUD(gameUI);
 
@@ -386,7 +403,12 @@ namespace VN.EditorTools
             Stretch(title.background.rectTransform);
 
             // 왼쪽: 캐릭터 3명 (뒤 2명 → 가운데 앞 1명 순서로 그려야 겹침이 맞음)
-            var chars = Child("Characters", rt);
+            // 노치를 피하는 안전 영역 (바탕은 화면 전체, 글자/버튼은 안전 영역 안)
+            var safe = Child("Safe", rt);
+            Stretch(safe);
+            safe.gameObject.AddComponent<VNSafeArea>();
+
+            var chars = Child("Characters", safe);
             Stretch(chars);
             var slots = new Image[3];
             float[] xs = { 330, 600, 870 };
@@ -402,7 +424,7 @@ namespace VN.EditorTools
             title.characterSlots = slots;
 
             // 오른쪽: 제목 + 버튼 묶음
-            var right = Child("Right", rt);
+            var right = Child("Right", safe);
             Place(right, new Vector2(1, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-520, 0), new Vector2(820, 1000));
 
             // 장식: 하트, 반짝이
@@ -438,8 +460,10 @@ namespace VN.EditorTools
             title.galleryButton = TitleButton(buttons, "갤러리");
             title.settingsButton = TitleButton(buttons, "환경 설정");
             title.quitButton = TitleButton(buttons, "종료");
+            var quitAdj = title.quitButton.gameObject.AddComponent<VNPlatformAdjust>();
+            quitAdj.hideOnMobile = quitAdj.hideOnWeb = true; // 폰·웹에서는 종료가 안 되므로 숨김
 
-            var ver = Txt(rt, "Version", "v0.4", 22, TextAnchor.LowerRight, BrownSoft);
+            var ver = Txt(safe, "Version", "v0.5", 22, TextAnchor.LowerRight, BrownSoft);
             Place(ver.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-30, 20), new Vector2(300, 40));
 
             // 모드 선택 창 (새로 시작 → 모드 고르기). 카드는 VNEngine.modes 로 자동 생성
@@ -517,6 +541,7 @@ namespace VN.EditorTools
             menu.bgmSlider = SliderRow(content, "배경음 볼륨", -250, 0f, 1f, false, out menu.bgmValue);
             menu.seSlider = SliderRow(content, "효과음 볼륨", -350, 0f, 1f, false, out menu.seValue);
             menu.fullscreenToggle = ToggleRow(content, "전체 화면", -450);
+            menu.fullscreenToggle.gameObject.AddComponent<VNPlatformAdjust>().hideOnMobile = true;
 
             menu.closeButton = close;
             return menu;
@@ -579,6 +604,7 @@ namespace VN.EditorTools
 
             var entry = Txt(contentRt, "EntryTemplate", "대사", 28, TextAnchor.UpperLeft, Brown);
             entry.lineSpacing = 1.3f;
+            DialogueFont(entry);
             entry.gameObject.SetActive(false);
             log.entryTemplate = entry;
             log.content = contentRt;
@@ -689,6 +715,25 @@ namespace VN.EditorTools
             dlg.noButton = WhiteButton(win, "No", "아니오", 28, 64);
             Place((RectTransform)dlg.noButton.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(125, 40), new Vector2(220, 64));
             return dlg;
+        }
+
+        /// <summary>폰을 세로로 들면 덮어 띄우는 "가로로 돌려 주세요" 안내</summary>
+        static void BuildRotateHint(Transform root)
+        {
+            var rt = Child("RotateHint", root);
+            Stretch(rt);
+            var hint = rt.gameObject.AddComponent<VNRotateHint>();
+            var overlay = Child("Overlay", rt);
+            Stretch(overlay);
+            Img(overlay, TitleBg).raycastTarget = true;
+            var icon = Img(Child("Icon", overlay), Pink, arrow);
+            icon.type = Image.Type.Simple;
+            Place(icon.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 90), new Vector2(120, 120));
+            icon.rectTransform.localEulerAngles = new Vector3(0, 0, 90);
+            var t = Txt(overlay, "Text", "화면을 가로로 돌려 주세요", 56, TextAnchor.MiddleCenter, Brown, FontStyle.Bold);
+            Place(t.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -60), new Vector2(1400, 100));
+            overlay.gameObject.SetActive(false);
+            hint.overlay = overlay.gameObject;
         }
 
         // ───────────────────────── 메뉴 창 틀 ─────────────────────────
@@ -1023,7 +1068,9 @@ namespace VN.EditorTools
 
         static void LoadResources()
         {
-            font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            uiFontAsset = AssetDatabase.LoadAssetAtPath<Font>(UIFontPath);
+            dialogueFontAsset = AssetDatabase.LoadAssetAtPath<Font>(DialogueFontPath);
+            font = uiFontAsset != null ? uiFontAsset : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             Directory.CreateDirectory(UIDir);
             var c = new Vector2(64, 64);
             var b63 = new Vector4(63, 63, 63, 63);
@@ -1185,6 +1232,13 @@ namespace VN.EditorTools
             return img;
         }
 
+        /// <summary>대사용 폰트로 표시 (VNEngine.dialogueFont)</summary>
+        static void DialogueFont(Text t)
+        {
+            t.gameObject.AddComponent<VNDialogueFont>();
+            if (dialogueFontAsset != null) t.font = dialogueFontAsset;
+        }
+
         static void AddDropShadow(Graphic g)
         {
             var s = g.gameObject.AddComponent<Shadow>();
@@ -1250,6 +1304,8 @@ namespace VN.EditorTools
             t.font = font;
             t.text = content;
             t.fontSize = size;
+            // UI 폰트(그리운 예은체)는 원래 굵어서, 작은 글씨에 굵게까지 넣으면 뭉개짐 → 큰 제목만 굵게
+            if (uiFontAsset != null && style == FontStyle.Bold && size < 60) style = FontStyle.Normal;
             t.fontStyle = style;
             t.alignment = align;
             t.color = color;

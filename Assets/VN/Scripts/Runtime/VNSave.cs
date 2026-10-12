@@ -48,24 +48,39 @@ namespace VN
 
         static string PathOf(int slot) => Path.Combine(Application.persistentDataPath, $"save_{slot:00}.json");
 
-        public static bool Exists(int slot) => File.Exists(PathOf(slot));
+        // 웹 버전은 브라우저 저장소(PlayerPrefs)에 저장 (파일 저장은 브라우저에서 바로 반영되지 않음)
+        static bool UsePrefs => Application.platform == RuntimePlatform.WebGLPlayer;
+        static string KeyOf(int slot) => $"vn.save.{slot:00}";
+
+        public static bool Exists(int slot) => UsePrefs ? PlayerPrefs.HasKey(KeyOf(slot)) : File.Exists(PathOf(slot));
 
         public static void Save(int slot, VNSaveData data)
         {
-            try { File.WriteAllText(PathOf(slot), JsonUtility.ToJson(data, true)); }
+            try
+            {
+                string json = JsonUtility.ToJson(data, !UsePrefs);
+                if (UsePrefs) { PlayerPrefs.SetString(KeyOf(slot), json); PlayerPrefs.Save(); }
+                else File.WriteAllText(PathOf(slot), json);
+            }
             catch (Exception e) { Debug.LogError($"[VN] 저장 실패 (슬롯 {slot}): {e.Message}"); }
         }
 
         public static VNSaveData Load(int slot)
         {
             if (!Exists(slot)) return null;
-            try { return JsonUtility.FromJson<VNSaveData>(File.ReadAllText(PathOf(slot))); }
+            try
+            {
+                string json = UsePrefs ? PlayerPrefs.GetString(KeyOf(slot)) : File.ReadAllText(PathOf(slot));
+                return JsonUtility.FromJson<VNSaveData>(json);
+            }
             catch (Exception e) { Debug.LogError($"[VN] 불러오기 실패 (슬롯 {slot}): {e.Message}"); return null; }
         }
 
         public static void Delete(int slot)
         {
-            if (Exists(slot)) File.Delete(PathOf(slot));
+            if (!Exists(slot)) return;
+            if (UsePrefs) { PlayerPrefs.DeleteKey(KeyOf(slot)); PlayerPrefs.Save(); }
+            else File.Delete(PathOf(slot));
         }
     }
 

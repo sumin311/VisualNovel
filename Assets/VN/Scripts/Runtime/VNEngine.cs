@@ -47,9 +47,11 @@ namespace VN
         [Tooltip("플레이어 성별 변수 (1 = 남자, 2 = 여자). 대사의 {남자일때|여자일때} 에 사용")]
         public string genderVariable = "성별";
 
-        [Header("폰트")]
-        [Tooltip("한글 폰트(.ttf/.otf)를 넣으면 모든 UI 텍스트에 적용. 비워두면 OS의 한글 폰트(맑은 고딕 등) 사용")]
-        public Font customFont;
+        [Header("폰트 (Assets/Fonts/ 의 .ttf/.otf)")]
+        [Tooltip("버튼·메뉴 등 UI 글자. 비워두면 OS의 한글 폰트(맑은 고딕 등) 사용")]
+        public Font uiFont;
+        [Tooltip("대사·대사 로그 글자 (VNDialogueFont 표시가 붙은 글자). 비워두면 UI 폰트 사용")]
+        public Font dialogueFont;
 
         [Header("참조 (VN > 메인 씬 다시 생성 시 자동 연결)")]
         public VNStage stage;
@@ -109,7 +111,7 @@ namespace VN
 
         void ApplyFont()
         {
-            Font f = customFont;
+            Font f = uiFont;
             if (f == null)
             {
                 try
@@ -119,8 +121,12 @@ namespace VN
                 }
                 catch (Exception) { f = null; }
             }
-            if (f == null) return;
-            foreach (var t in FindObjectsOfType<Text>(true)) t.font = f;
+            Font d = dialogueFont != null ? dialogueFont : f;
+            foreach (var t in FindObjectsOfType<Text>(true))
+            {
+                Font use = t.GetComponent<VNDialogueFont>() != null ? d : f;
+                if (use != null) t.font = use;
+            }
         }
 
         void WireButtons()
@@ -135,6 +141,7 @@ namespace VN
             dialogue.autoButton.onClick.AddListener(ToggleAuto);
             dialogue.skipButton.onClick.AddListener(ToggleSkip);
             dialogue.statButton.onClick.AddListener(ToggleStats);
+            if (dialogue.hideButton != null) dialogue.hideButton.onClick.AddListener(() => SetUIHidden(true));
             dialogue.configButton.onClick.AddListener(() => OpenMenu(VNMenuKind.Settings));
             dialogue.titleButton.onClick.AddListener(() =>
                 confirmDialog.Show("타이틀 화면으로 돌아갈까요?\n저장하지 않은 진행 상황은 사라집니다.", ReturnToTitle));
