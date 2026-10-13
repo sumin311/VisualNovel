@@ -9,7 +9,7 @@
 - 저장소: https://github.com/sumin311/VisualNovel (공개). 사용자는 GitHub Desktop으로 commit/push/pull 함
 - Git이 PATH에 없을 수 있음. GitHub Desktop 내장 git: `%LOCALAPPDATA%\GitHubDesktop\app-*\resources\app\git\cmd\git.exe`
 - 패키지: uGUI(Legacy `UnityEngine.UI.Text`), TextMeshPro 미사용. 폰트: `Assets/Fonts/` — UI는 Griun_Yeeun-Rg.ttf (`VNEngine.uiFont`), 대사·로그는 NanumBarunpenB.ttf (`VNEngine.dialogueFont`, `VNDialogueFont` 표시 붙은 Text). 비면 OS 폰트로 대체. 두 폰트 모두 저장소에 포함 (그리운 예은체: 사용 범위 제한 없음, 폰트 파일 개작·수정·판매만 금지 — 파일을 수정하지 말 것)
-- 플랫폼: PC(윈도우) + **웹(WebGL) — 친구들이 아이폰이라 웹 링크로 배포**. `VN > 웹 버전 빌드` → `Builds/WebGL` + `docs/` 복사 → GitHub Pages(main /docs) https://sumin311.github.io/VisualNovel/ (템플릿 `Assets/WebGLTemplates/VN`, Gzip+decompressionFallback). 웹 세이브는 PlayerPrefs. 폰 대응: `VNPlatformAdjust`(폰 확대/숨김), `VNSafeArea`, `VNRotateHint`(세로면 안내), 퀵메뉴 "숨기기" 버튼
+- 플랫폼: PC(윈도우) + **웹(WebGL) — 친구들이 아이폰이라 웹 링크로 배포**. **main에 Push하면 GitHub Actions(`.github/workflows/webgl.yml`, game-ci/unity-builder, `VNBuildTools.BuildWebGLBatch`)가 자동 빌드 → `Builds/WebGL`을 GitHub Pages(Source: GitHub Actions)에 배포** https://sumin311.github.io/VisualNovel/ . 시크릿 UNITY_LICENSE/UNITY_EMAIL/UNITY_PASSWORD 필요(사용자가 직접 등록). `docs/`는 예전 수동 방식(`VN > 웹 버전 빌드`가 복사)의 잔재로, 자동 배포가 확인되면 지워도 됨 (템플릿 `Assets/WebGLTemplates/VN`, Gzip+decompressionFallback). 웹 세이브는 PlayerPrefs. 폰 대응: `VNPlatformAdjust`(폰 확대/숨김), `VNSafeArea`, `VNRotateHint`(세로면 안내), 퀵메뉴 "숨기기" 버튼
 
 ## 게임 설정 (사용자가 정한 것 — 바꾸지 말 것)
 
@@ -37,7 +37,7 @@ Assets/Resources/Story/      스토리 .txt (사용자가 직접 수정함)
   harem_start.txt  [승주가 되기] → harem_day1 … harem_day7(축제) → harem_ending
 Assets/Resources/Backgrounds/  배경 (파일명 = @bg 이름)
 Assets/Resources/Characters/   스탠딩 "이름_표정.png" (표정: 기본/웃음/화남/부끄럼)
-Assets/Resources/CG/           CG 7장 (승주_우산, 승주_고백, 승현/서연/기주/수민/하렘_엔딩)
+Assets/Resources/CG/           CG 11장 (승주_우산, 승주_고백, 승현/서연/기주/수민/하렘_엔딩, 친구별 특별 장면: 승현_농구·서연_도서관·기주_음악실·수민_편의점 — harem_day1 방과후)
 Assets/Resources/Audio/BGM, SE  (아직 비어 있음 → 검사 시 BGM/SE 없음 경고는 정상)
 Assets/VN/Scripts/Runtime/     엔진 (VNEngine, VNScript 파서, VNStage, VNAffectionHUD, VNGallery 등)
 Assets/VN/Scripts/Editor/      씬 생성기(VNSceneBuilder), 스토리 검사기, 텍스처 자동 임포트
@@ -47,6 +47,7 @@ Assets/Scenes/Main.unity       유일한 씬. 전체 UI가 VNSceneBuilder로 생
 ```
 
 - 이미지는 현재 전부 코드로 그린 **임시 이미지**. 사용자가 AI로 뽑은 그림으로 같은 파일명에 덮어씀
+- 임시 스탠딩·CG 생성기: `Tools/PlaceholderArt/` (C# 5, System.Drawing, `run.ps1 [이름 일부]`로 실행). **같은 이름 파일을 덮어쓰니 사용자가 진짜 그림을 넣은 뒤에는 실행 금지.** .cs는 UTF-8 BOM 필수. 캐릭터는 800x1400 왼쪽 보기, 머리는 (400,612) 기준 0.86배
 - **스토리는 현재 뼈대 상태** (사용자 선택). 선택지·호감도·분기는 완성, 대사는 `[작성]` 표시 줄로 비워 둠 → 사용자가 직접 채움. 검사기가 `[작성]` 개수를 셈. 사용자가 요청하지 않으면 대사를 대신 채우지 말 것
 - 모드 목록은 `VNEngine.modes` (이름/설명/첫 파일). 세이브에 모드 이름·첫 파일·게이지 목록·화자도 저장됨
 - 스탠딩 배치 (사용자 요청): 말하는 사람 = 오른쪽에 크게, 나머지 = 왼쪽에 좌우반전 + 어둡게 (`VNStage.Arrange`). 나레이션/무대 밖 화자는 배치 유지. 아무도 안 말했으면 `@show` 위치

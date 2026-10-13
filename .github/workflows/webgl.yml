@@ -1,0 +1,81 @@
+# 웹 버전 자동 빌드
+# main 에 Push 하면 GitHub 가 Unity 로 웹(WebGL) 버전을 빌드해서 GitHub Pages 에 올려요.
+#   https://sumin311.github.io/VisualNovel/
+# 필요한 설정 (한 번만):
+#   1) 저장소 Settings → Secrets and variables → Actions 에 UNITY_LICENSE, UNITY_EMAIL, UNITY_PASSWORD
+#   2) 저장소 Settings → Pages → Source 를 "GitHub Actions" 로
+# 진행 상황은 저장소의 Actions 탭에서 볼 수 있어요. (첫 빌드는 20분 안팎, 그 뒤엔 더 빨라요)
+name: 웹 버전 자동 빌드
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'Tools/**'
+  workflow_dispatch: # Actions 탭에서 "Run workflow" 로 직접 실행도 가능
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Unity WebGL 빌드
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 받기
+        uses: actions/checkout@v4
+
+      - name: 디스크 공간 확보
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+          docker-images: false
+          swap-storage: false
+
+      - name: Library 캐시 (다음 빌드를 빠르게)
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-WebGL-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-WebGL-
+
+      - name: Unity 빌드
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: 2022.3.62f3
+          targetPlatform: WebGL
+          buildMethod: VN.EditorTools.VNBuildTools.BuildWebGLBatch
+
+      - name: 웹 파일 올릴 준비
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: Builds/WebGL
+
+  deploy:
+    name: GitHub Pages 에 올리기
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 배포
+        id: deployment
+        uses: actions/deploy-pages@v4
