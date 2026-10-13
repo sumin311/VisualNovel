@@ -8,7 +8,7 @@
 - **Unity 2022.3.62f3** (다른 버전으로 열지 말 것)
 - 저장소: https://github.com/sumin311/VisualNovel (공개). 사용자는 GitHub Desktop으로 commit/push/pull 함
 - Git이 PATH에 없을 수 있음. GitHub Desktop 내장 git: `%LOCALAPPDATA%\GitHubDesktop\app-*\resources\app\git\cmd\git.exe`
-- 패키지: uGUI(Legacy `UnityEngine.UI.Text`), TextMeshPro 미사용. 폰트: `Assets/Fonts/` — UI는 Griun_Yeeun-Rg.ttf (`VNEngine.uiFont`), 대사·로그는 NanumBarunpenB.ttf (`VNEngine.dialogueFont`, `VNDialogueFont` 표시 붙은 Text). 비면 OS 폰트로 대체. Griun ttf는 재배포 조건이 불확실해 .gitignore (다른 PC에서 클론하면 직접 넣어야 함)
+- 패키지: uGUI(Legacy `UnityEngine.UI.Text`), TextMeshPro 미사용. 폰트: `Assets/Fonts/` — UI는 Griun_Yeeun-Rg.ttf (`VNEngine.uiFont`), 대사·로그는 NanumBarunpenB.ttf (`VNEngine.dialogueFont`, `VNDialogueFont` 표시 붙은 Text). 비면 OS 폰트로 대체. 두 폰트 모두 저장소에 포함 (그리운 예은체: 사용 범위 제한 없음, 폰트 파일 개작·수정·판매만 금지 — 파일을 수정하지 말 것)
 - 플랫폼: PC(윈도우) + **웹(WebGL) — 친구들이 아이폰이라 웹 링크로 배포**. `VN > 웹 버전 빌드` → `Builds/WebGL` + `docs/` 복사 → GitHub Pages(main /docs) https://sumin311.github.io/VisualNovel/ (템플릿 `Assets/WebGLTemplates/VN`, Gzip+decompressionFallback). 웹 세이브는 PlayerPrefs. 폰 대응: `VNPlatformAdjust`(폰 확대/숨김), `VNSafeArea`, `VNRotateHint`(세로면 안내), 퀵메뉴 "숨기기" 버튼
 
 ## 게임 설정 (사용자가 정한 것 — 바꾸지 말 것)

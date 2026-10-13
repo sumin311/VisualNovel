@@ -8,7 +8,3 @@
 *.csproj
 *.sln
 .vs/
-
-
-# 재배포 허용 여부가 확실치 않은 폰트 파일은 공개 저장소에 올리지 않음 (게임 빌드 안에는 포함됨)
-/Assets/Fonts/Griun_Yeeun-Rg.ttf
