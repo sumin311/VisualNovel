@@ -39,7 +39,7 @@ namespace VN
         [Tooltip("새로 시작을 누르면 고를 수 있는 모드들")]
         public VNGameMode[] modes =
         {
-            new VNGameMode("승주를 꼬시기", "'나'가 되어, 도도한 공주님 승주의 마음을 얻어 보자.", "start"),
+            new VNGameMode("승주를 꼬시기", "'나'가 되어, 도도한 승주의 마음을 얻어 보자.", "start"),
             new VNGameMode("승주가 되기", "승주가 되어 보자. 친구 넷이 전부 나를 노린다?!", "harem_start"),
         };
         [Tooltip("테스트용 시작 위치. 비워두면 처음부터. 라벨 이름 / 파일 이름(day4) / 파일:라벨(day4:수민) 가능")]

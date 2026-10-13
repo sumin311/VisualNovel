@@ -11140,7 +11140,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   modes:
   - name: "\uC2B9\uC8FC\uB97C \uAF2C\uC2DC\uAE30"
-    description: "'\uB098'\uAC00 \uB418\uC5B4, \uB3C4\uB3C4\uD55C \uACF5\uC8FC\uB2D8
+    description: "'\uB098'\uAC00 \uB418\uC5B4, \uB3C4\uB3C4\uD55C
       \uC2B9\uC8FC\uC758 \uB9C8\uC74C\uC744 \uC5BB\uC5B4 \uBCF4\uC790."
     startScript: start
   - name: "\uC2B9\uC8FC\uAC00 \uB418\uAE30"
