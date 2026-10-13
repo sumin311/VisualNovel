@@ -44,6 +44,7 @@ public class Spec
     public string Name, Hair, Outfit;
     public Color HairC, HairSh, HairLt, HairLine, BrowC;
     public bool Headphones;
+    public bool Male;
 }
 
 public class Look
@@ -215,7 +216,16 @@ public static class PlaceholderArt
         var sumin = Make("수민", "sumin", "hoodie");
         return new Spec[] { seungju, seunghyun, seoyeon, giju, sumin };
     }
-    static Spec Find(string name) { foreach (var s in AllSpecs()) if (s.Name == name) return s; return null; }
+    /// <summary>CG를 그릴 때 남자로 그릴 캐릭터 이름들</summary>
+    static HashSet<string> maleSet = new HashSet<string>();
+
+    static Spec AsMale(Spec s) { if (!s.Male) { s.Male = true; s.Hair = "m_" + s.Hair; } return s; }
+
+    static Spec Find(string name)
+    {
+        foreach (var s in AllSpecs()) if (s.Name == name) return maleSet.Contains(name) ? AsMale(s) : s;
+        return null;
+    }
 
     static Look L(string eyes, string brows, string mouth, string arms)
     {
@@ -266,8 +276,19 @@ public static class PlaceholderArt
         var st = g.Save(); g.TranslateTransform(HPX, HPY); g.ScaleTransform(HS, HS); g.TranslateTransform(-HPX, -HPY); return st;
     }
 
+    static bool curMale;
+    static string BaseHair(Spec s) { return s.Hair.StartsWith("m_") ? s.Hair.Substring(2) : s.Hair; }
+    /// <summary>남자는 어깨·몸통을 가로로 조금 넓게</summary>
+    static GraphicsState BodyOn(Graphics g, Spec s)
+    {
+        var st = g.Save();
+        if (s.Male) { g.TranslateTransform(400, 0); g.ScaleTransform(1.08f, 1f); g.TranslateTransform(-400, 0); }
+        return st;
+    }
+
     public static void DrawChar(Graphics g, Spec s, Look k)
     {
+        curMale = s.Male;
         // 몸 전체를 살짝 키움 (발 쪽 기준)
         var whole = g.Save();
         g.TranslateTransform(400, 1400); g.ScaleTransform(1.06f, 1.06f); g.TranslateTransform(-400, -1400);
@@ -278,13 +299,14 @@ public static class PlaceholderArt
     static void DrawCharInner(Graphics g, Spec s, Look k)
     {
         var hs = HeadOn(g); BackHair(g, s); g.Restore(hs);
+        var bs = BodyOn(g, s);
         if (s.Outfit == "hoodie") Hood(g);
         if (k.Arms == "blanketOpen") Cape(g);
         bool neckPhones = s.Headphones && k.Arms != "headphonesHold" && k.Arms != "headphoneShare";
         if (neckPhones) PhonesBand(g);
-        Neck(g);
+        Neck(g, s.Male);
         Torso(g);
-        Skirt(g);
+        if (s.Male) Pants(g); else Skirt(g);
         Tie(g);
         Collar(g);
         if (s.Outfit == "blazer") Blazer(g);
@@ -293,6 +315,7 @@ public static class PlaceholderArt
         Arms(g, s, k, 0);
         if (s.Outfit == "blanket" && k.Arms != "blanketOpen") Blanket(g);
         Arms(g, s, k, 1);
+        g.Restore(bs);
         hs = HeadOn(g);
         Head(g, s, k);
         if (k.Arms == "blanketMouth")
@@ -304,7 +327,9 @@ public static class PlaceholderArt
         Brows(g, s, k);
         Effects(g, k);
         g.Restore(hs);
+        bs = BodyOn(g, s);
         Arms(g, s, k, 2);
+        g.Restore(bs);
     }
 
     // ── 뒷머리 ──
@@ -325,6 +350,14 @@ public static class PlaceholderArt
                     .L(600, 1092).Q(650, 1000, 622, 880).Q(586, 760, 614, 640).Q(642, 520, 606, 380).Q(606, 122, 408, 116).Z();
             case "giju":
                 return new PB().M(408, 116).Q(218, 122, 224, 330).Q(220, 470, 246, 568).L(570, 568).Q(594, 470, 592, 330).Q(598, 122, 408, 116).Z();
+            case "m_seungju":
+                return new PB().M(408, 116).Q(214, 122, 218, 360).Q(220, 470, 250, 540).L(566, 540).Q(596, 470, 598, 360).Q(602, 122, 408, 116).Z();
+            case "m_seunghyun":
+                return new PB().M(408, 116).Q(216, 122, 220, 350).Q(222, 440, 246, 500).L(572, 500).Q(594, 440, 596, 350).Q(600, 122, 408, 116).Z();
+            case "m_seoyeon":
+                return new PB().M(408, 116).Q(212, 122, 216, 360).Q(204, 460, 226, 540).Q(238, 580, 266, 566).L(552, 566).Q(580, 580, 592, 540).Q(612, 460, 600, 360).Q(604, 122, 408, 116).Z();
+            case "m_giju":
+                return new PB().M(408, 116).Q(218, 122, 224, 330).Q(224, 430, 250, 500).L(566, 500).Q(592, 430, 592, 330).Q(598, 122, 408, 116).Z();
             default:
                 return new PB().M(408, 120).Q(224, 126, 232, 330).L(236, 392).L(588, 392).Q(594, 126, 408, 120).Z();
         }
@@ -367,12 +400,20 @@ public static class PlaceholderArt
             Line(g, A(s.HairLine, 160), 2f, 600, 260, 652, 420, 650, 640, 626, 840);
             Line(g, A(s.HairLine, 160), 2f, 620, 230, 676, 380, 676, 560, 652, 760);
         }
+        if (s.Hair == "m_sumin")
+        {
+            // 짧은 꽁지머리
+            var tail = new PB().M(566, 166).Q(650, 170, 662, 270).Q(672, 380, 640, 480).L(620, 470).Q(636, 370, 622, 280).Q(608, 226, 558, 232).Z();
+            HairFill(g, s, tail, -10, -4);
+            Line(g, A(s.HairLine, 160), 2f, 600, 250, 640, 340, 632, 450);
+        }
     }
 
     // ── 몸 ──
-    static void Neck(Graphics g)
+    static void Neck(Graphics g, bool male)
     {
-        var neck = new PB().M(342, 468).L(432, 468).L(438, 642).Q(390, 662, 338, 650).Z();
+        var neck = male ? new PB().M(334, 468).L(440, 468).L(446, 642).Q(390, 664, 330, 650).Z()
+                        : new PB().M(342, 468).L(432, 468).L(438, 642).Q(390, 662, 338, 650).Z();
         F(g, neck, SKIN);
         Clip(g, neck, () => F(g, Poly(330, 460, 450, 460, 450, 590, 330, 556), SKIN_SH));
         S(g, neck, SKIN_LINE, 2.5f);
@@ -396,6 +437,28 @@ public static class PlaceholderArt
             for (int i = 0; i < 4; i++) FS(g, Ell(402, 950 + i * 0, 9, 9), H("#E9EBF2"), H("#B9BDCA"), 1.5f);
         });
         S(g, t, LINE, 3f);
+    }
+
+    static void Pants(Graphics g)
+    {
+        var legL = new PB().M(280, 996).L(406, 998).L(404, 1404).L(246, 1404).Q(260, 1200, 280, 996).Z();
+        var legR = new PB().M(398, 998).L(532, 998).Q(548, 1200, 562, 1404).L(400, 1404).Z();
+        foreach (var leg in new[] { legL, legR })
+        {
+            var lp = leg;
+            Cel(g, lp, SKIRT, SKIRT_DK, -22, 0);
+            Clip(g, lp, () =>
+            {
+                for (int y = 1070; y < 1404; y += 90) { F(g, Rect(200, y, 400, 8), A(SKIRT_DK, 90)); F(g, Rect(200, y + 18, 400, 2), A(SKIRT_LT, 150)); }
+                for (int x = 250; x < 580; x += 64) { F(g, Rect(x, 990, 7, 420), A(SKIRT_DK, 70)); F(g, Rect(x + 16, 990, 2, 420), A(SKIRT_LT, 140)); }
+            });
+            S(g, lp, LINE, 3f);
+        }
+        Line(g, A(LINE, 140), 2.5f, 342, 1060, 330, 1404);
+        Line(g, A(LINE, 140), 2.5f, 466, 1060, 480, 1404);
+        Line(g, A(LINE, 150), 2.5f, 402, 1024, 404, 1130);
+        FS(g, Rect(270, 988, 272, 28), H("#2E2B35"), LINE, 2.5f);
+        FS(g, RRect(384, 992, 32, 20, 4), H("#C9CBD3"), LINE, 2f);
     }
 
     static void Skirt(Graphics g)
@@ -876,6 +939,7 @@ public static class PlaceholderArt
         float dir = far ? -1 : 1;
         var inner = new PointF(cx - dir * w / 2, cy + 4); var outer = new PointF(cx + dir * w / 2, cy - 4);
         string st = k.Eyes;
+        if (curMale) h *= 0.88f;
         if (st == "wink") st = far ? "open" : "closedWink";
         if (st == "happy")
         {
@@ -914,7 +978,7 @@ public static class PlaceholderArt
             if (k.Tear) F(g, new PB().M(inn.X, cy + h * 0.2f).Q(cx, cy + h * 0.46f, outp.X, cy + h * 0.2f).Q(cx, cy + h * 0.6f, inn.X, cy + h * 0.2f).Z(), A(H("#CFEFFF"), 200));
         });
         S(g, new PB().M(inner.X, inner.Y).Q(topC.X, topC.Y, outer.X, outer.Y).O(), EYE_DARK, far ? 6f : 7.5f);
-        Line(g, EYE_DARK, 5f, outer.X, outer.Y, outer.X + dir * 12, outer.Y - 9);
+        if (!curMale) Line(g, EYE_DARK, 5f, outer.X, outer.Y, outer.X + dir * 12, outer.Y - 9);
         S(g, new PB().M(cx + dir * w * 0.02f, cy + h * 0.5f).Q(cx + dir * w * 0.34f, cy + h * 0.44f, outer.X - dir * 2, outer.Y + 12).O(), A(EYE_DARK, 200), 2.5f);
         if (st == "open" || st == "glare")
             S(g, new PB().M(cx - dir * w * 0.06f, cy - h * 0.5f).Q(cx + dir * w * 0.3f, cy - h * 0.56f, outer.X + dir * 4, outer.Y - 14).O(), A(EYE_DARK, 150), 2f);
@@ -964,19 +1028,20 @@ public static class PlaceholderArt
             case "flat": arch = 2; foy -= 4; noy -= 4; break;
             case "flatUp": arch = 3; fiy -= 4; niy -= 4; foy -= 10; noy -= 10; break;
         }
-        Color c = s.Hair == "seungju" ? s.BrowC : A(s.BrowC, 215);
+        Color c = BaseHair(s) == "seungju" ? s.BrowC : A(s.BrowC, 215);
         Brow(g, 344, fiy, 282, foy, arch, c);
         Brow(g, 414, niy, 502, noy, arch, c);
     }
     static void Brow(Graphics g, float ix, float iy, float ox, float oy, float arch, Color c)
     {
-        F(g, Tube(7.5f, 2.5f, ix, iy, (ix + ox) / 2, (iy + oy) / 2 - arch, ox, oy), c);
+        if (curMale) F(g, Tube(11f, 5f, ix, iy, (ix + ox) / 2, (iy + oy) / 2 - arch * 0.6f, ox, oy), c);
+        else F(g, Tube(7.5f, 2.5f, ix, iy, (ix + ox) / 2, (iy + oy) / 2 - arch, ox, oy), c);
     }
 
     // ── 앞머리 ──
     static GraphicsPath FrontMain(Spec s)
     {
-        switch (s.Hair)
+        switch (BaseHair(s))
         {
             case "seungju":
                 return new PB().M(236, 330).Q(210, 150, 408, 118).Q(602, 136, 586, 330).Q(566, 276, 496, 214)
@@ -1020,6 +1085,22 @@ public static class PlaceholderArt
                 locks.Add(new PB().M(258, 296).Q(228, 420, 240, 550).L(298, 558).Q(282, 440, 288, 316).Z());
                 locks.Add(new PB().M(548, 292).Q(590, 420, 574, 554).L(520, 562).Q(532, 440, 520, 312).Z());
                 break;
+            case "m_seungju":
+                locks.Add(new PB().M(262, 214).Q(232, 300, 234, 400).Q(238, 456, 256, 486).L(274, 474).Q(272, 380, 296, 226).Z());
+                locks.Add(new PB().M(536, 206).Q(586, 300, 584, 400).Q(578, 458, 556, 488).L(540, 474).Q(550, 360, 512, 222).Z());
+                break;
+            case "m_seunghyun":
+                locks.Add(new PB().M(262, 330).Q(234, 390, 246, 450).Q(252, 480, 240, 500).Q(262, 496, 270, 470).Q(268, 400, 282, 336).Z());
+                locks.Add(new PB().M(552, 320).Q(586, 390, 574, 450).Q(568, 480, 582, 500).Q(560, 496, 550, 470).Q(550, 400, 534, 330).Z());
+                break;
+            case "m_seoyeon":
+                locks.Add(new PB().M(262, 330).Q(222, 420, 238, 500).Q(246, 540, 230, 566).Q(256, 570, 264, 530).Q(270, 440, 282, 336).Z());
+                locks.Add(new PB().M(552, 320).Q(594, 420, 580, 500).Q(572, 540, 590, 566).Q(562, 570, 556, 530).Q(552, 440, 534, 330).Z());
+                break;
+            case "m_giju":
+                locks.Add(new PB().M(258, 296).Q(236, 380, 250, 476).L(286, 482).Q(282, 400, 288, 316).Z());
+                locks.Add(new PB().M(548, 292).Q(582, 380, 568, 476).L(530, 482).Q(536, 400, 520, 312).Z());
+                break;
             default:
                 locks.Add(new PB().M(264, 304).Q(248, 390, 256, 478).L(274, 472).Q(272, 390, 282, 306).Z());
                 locks.Add(new PB().M(540, 304).Q(556, 388, 548, 464).L(534, 466).Q(538, 390, 526, 306).Z());
@@ -1030,31 +1111,35 @@ public static class PlaceholderArt
         // 천사링(윤기)
         Clip(g, main, () =>
         {
-            float y = s.Hair == "seungju" ? -58 : 0; // 승주는 이마가 보여서 윤기를 정수리 쪽에
-            float bw = s.Hair == "seungju" ? 12 : 22;
+            float y = BaseHair(s) == "seungju" ? -58 : 0; // 승주는 이마가 보여서 윤기를 정수리 쪽에
+            float bw = BaseHair(s) == "seungju" ? 12 : 22;
             F(g, new PB().M(270, 228 + y).Q(404, 168 + y, 546, 232 + y).L(542, 232 + y + bw).Q(404, 170 + y + bw, 274, 228 + y + bw).Z(), A(s.HairLt, 210));
             F(g, new PB().M(300, 214 + y).L(318, 204 + y).L(330, 246 + y).L(312, 250 + y).Z(), s.HairC);
             F(g, new PB().M(452, 204 + y).L(470, 208 + y).L(472, 244 + y).L(454, 242 + y).Z(), s.HairC);
         });
         // 머리결
         Color sl = A(s.HairLine, 150);
-        switch (s.Hair)
+        switch (BaseHair(s))
         {
             case "seungju":
                 Line(g, s.HairLine, 2.5f, 384, 170, 396, 124);
                 Line(g, sl, 2f, 376, 176, 318, 210, 282, 290);
                 Line(g, sl, 2f, 394, 176, 470, 206, 540, 280);
-                Line(g, sl, 2f, 246, 420, 240, 600, 248, 760);
-                Line(g, sl, 2f, 574, 420, 580, 640, 574, 820);
-                Line(g, sl, 2f, 560, 520, 566, 700);
+                if (!s.Male)
+                {
+                    Line(g, sl, 2f, 246, 420, 240, 600, 248, 760);
+                    Line(g, sl, 2f, 574, 420, 580, 640, 574, 820);
+                    Line(g, sl, 2f, 560, 520, 566, 700);
+                }
+                else Line(g, sl, 2f, 566, 320, 570, 440);
                 break;
             case "seunghyun":
             case "seoyeon":
                 Line(g, sl, 2f, 400, 150, 380, 230, 392, 320);
                 Line(g, sl, 2f, 440, 160, 456, 240, 446, 312);
                 Line(g, sl, 2f, 350, 160, 330, 240, 334, 308);
-                Line(g, sl, 2f, 250, 420, 252, 560);
-                Line(g, sl, 2f, 570, 420, 568, 560);
+                Line(g, sl, 2f, 250, 420, 252, s.Male ? 480 : 560);
+                Line(g, sl, 2f, 570, 420, 568, s.Male ? 480 : 560);
                 break;
             case "giju":
                 for (int i = 0; i < 8; i++)
@@ -1063,8 +1148,8 @@ public static class PlaceholderArt
                     var strand = new PB().M(x - 11, 212).Q(x - 4, 268, x - 9 + (i % 2) * 5, tipY).Q(x + 5, 266, x + 11, 212).Z();
                     HairFill(g, s, strand, -4, -4);
                 }
-                Line(g, sl, 2f, 266, 400, 270, 540);
-                Line(g, sl, 2f, 556, 400, 548, 544);
+                Line(g, sl, 2f, 266, 400, 270, s.Male ? 470 : 540);
+                Line(g, sl, 2f, 556, 400, 548, s.Male ? 470 : 544);
                 break;
             default:
                 for (int x = 300; x <= 512; x += 36) Line(g, sl, 2f, x, 262, x + 2, 312);
@@ -1165,6 +1250,7 @@ public static class PlaceholderArt
     }
     static void Caption(Graphics g, string text)
     {
+        if (maleSet.Count > 0) text += " (남)";
         using (var f = new Font("Malgun Gothic", 22, FontStyle.Bold, GraphicsUnit.Pixel))
         {
             var sz = g.MeasureString(text, f);
@@ -1603,11 +1689,31 @@ public static class PlaceholderArt
                 Save(800, 1400, g => DrawChar(g, spec, look), Path.Combine(chDir, name + ".png"));
                 Console.WriteLine("스탠딩 " + name);
             }
+        foreach (var s0 in AllSpecs())
+            foreach (var e in exprs)
+            {
+                string name = s0.Name + "_남_" + e;
+                if (!string.IsNullOrEmpty(filter) && !name.Contains(filter)) continue;
+                Spec fresh = null; foreach (var x in AllSpecs()) if (x.Name == s0.Name) fresh = x; var spec = AsMale(fresh); var look = Standing(fresh, e);
+                Save(800, 1400, g => DrawChar(g, spec, look), Path.Combine(chDir, name + ".png"));
+                Console.WriteLine("스탠딩 " + name);
+            }
         foreach (var kv in CGs())
         {
-            if (!string.IsNullOrEmpty(filter) && !kv.Key.Contains(filter)) continue;
-            Save(1920, 1080, kv.Value, Path.Combine(cgDir, kv.Key + ".png"));
-            Console.WriteLine("CG " + kv.Key);
+            // 기본(전원 여자) + 주인공이 남자인 버전 "이름_남" (하렘은 친구 넷 모두 남자)
+            string owner = kv.Key.Substring(0, kv.Key.IndexOf('_'));
+            var variants = new List<KeyValuePair<string, string[]>>();
+            variants.Add(new KeyValuePair<string, string[]>(kv.Key, new string[0]));
+            if (owner == "하렘") variants.Add(new KeyValuePair<string, string[]>(kv.Key + "_남", new[] { "승현", "서연", "기주", "수민" }));
+            else variants.Add(new KeyValuePair<string, string[]>(kv.Key + "_남", new[] { owner }));
+            foreach (var v in variants)
+            {
+                if (!string.IsNullOrEmpty(filter) && !v.Key.Contains(filter)) continue;
+                maleSet = new HashSet<string>(v.Value);
+                Save(1920, 1080, kv.Value, Path.Combine(cgDir, v.Key + ".png"));
+                Console.WriteLine("CG " + v.Key);
+            }
+            maleSet = new HashSet<string>();
         }
     }
 }

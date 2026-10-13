@@ -271,7 +271,10 @@ namespace VN
 
         void ApplySprite(Character c)
         {
-            Sprite sp = LoadSprite($"Characters/{c.name}_{c.expression}", false)
+            // 남자로 정해진 캐릭터는 "이름_남_표정.png" 를 먼저 찾고, 없으면 기본(여자) 그림을 씀
+            bool male = VNEngine.Instance != null && VNEngine.Instance.IsMale(c.name);
+            Sprite sp = (male ? LoadSprite($"Characters/{c.name}_남_{c.expression}", false) ?? LoadSprite($"Characters/{c.name}_남", false) : null)
+                        ?? LoadSprite($"Characters/{c.name}_{c.expression}", false)
                         ?? LoadSprite($"Characters/{c.name}", false);
             if (sp == null)
                 Debug.LogWarning($"[VN] 캐릭터 이미지를 찾을 수 없습니다: Assets/Resources/Characters/{c.name}_{c.expression}.png");

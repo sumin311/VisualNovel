@@ -17,6 +17,8 @@ namespace VN
         [TextArea] public string description;
         [Tooltip("이 모드를 고르면 실행할 스토리 파일 (Assets/Resources/Story/ 안의 .txt, 확장자 제외)")]
         public string startScript;
+        [Tooltip("시작 전 성별을 고를 등장인물 (비워두면 자동: 승주가 되기 모드는 '나' 제외)")]
+        public string[] cast;
 
         public VNGameMode(string name, string description, string startScript)
         {
@@ -86,6 +88,7 @@ namespace VN
         int choiceResult = -1;
         string lastSpeaker, lastText;
         int modeIndex;
+        VNGenderSelect genderSelect; // 실행 중에 모드 선택 창을 복제해서 만듦
 
         static readonly Regex interpolateRegex = new Regex(@"\{([^{}|]+)\}");
         static readonly Regex genderRegex = new Regex(@"\{([^{}|]*)\|([^{}|]*)\}");
@@ -102,6 +105,7 @@ namespace VN
 
         void Start()
         {
+            genderSelect = VNGenderSelect.Create(titleMenu);
             WireButtons();
             audioPlayer.ApplyVolume();
             CloseAllMenus();
@@ -149,8 +153,8 @@ namespace VN
 
             titleMenu.newGameButton.onClick.AddListener(() =>
             {
-                if (modes.Length == 1) NewGame(0);
-                else titleMenu.OpenModeSelect(modes, NewGame);
+                if (modes.Length == 1) OpenGenderSelect(0);
+                else titleMenu.OpenModeSelect(modes, OpenGenderSelect);
             });
             titleMenu.loadButton.onClick.AddListener(() => OpenMenu(VNMenuKind.Load));
             titleMenu.galleryButton.onClick.AddListener(() => OpenMenu(VNMenuKind.Gallery));
@@ -201,6 +205,7 @@ namespace VN
             if (backlog.IsOpen) { backlog.Close(); return true; }
             if (settingsMenu.IsOpen) { settingsMenu.Close(); return true; }
             if (saveLoadMenu.IsOpen) { saveLoadMenu.Close(); return true; }
+            if (genderSelect != null && genderSelect.IsOpen) { genderSelect.Close(); return true; }
             if (titleMenu.ModeSelectOpen) { titleMenu.CloseModeSelect(); return true; }
             return false;
         }
@@ -267,13 +272,54 @@ namespace VN
 
         // ───────────────────────── 게임 흐름 ─────────────────────────
 
-        public void NewGame(int mode)
+        // ── 등장인물 성별 (1 = 남자, 2 = 여자) ──
+        public static readonly string[] AllCast = { "나", "승주", "승현", "서연", "기주", "수민" };
+
+        /// <summary>성별 변수 이름: '나'는 genderVariable("성별"), 나머지는 "이름성별" (예: 승주성별)</summary>
+        public string GenderVar(string name) => name == "나" ? genderVariable : name + "성별";
+
+        /// <summary>남자로 정해졌는지. 정해지지 않았으면 등장인물은 여자, '나'는 남자로 봄 (예전 세이브 호환)</summary>
+        public bool IsMale(string name)
+        {
+            int v = GetVariable(GenderVar(name));
+            return name == "나" ? v != 2 : v == 1;
+        }
+
+        bool IsHaremMode(int mode) => modes[mode].startScript.StartsWith("harem");
+
+        string[] CastFor(int mode)
+        {
+            if (modes[mode].cast != null && modes[mode].cast.Length > 0) return modes[mode].cast;
+            return IsHaremMode(mode) ? new[] { "승주", "승현", "서연", "기주", "수민" } : AllCast;
+        }
+
+        string RoleOf(int mode, string name)
+        {
+            if (IsHaremMode(mode)) return name == "승주" ? "나 (플레이어)" : "나를 노리는 친구";
+            if (name == "나") return "플레이어";
+            return name == "승주" ? "공략 대상" : "친구";
+        }
+
+        void OpenGenderSelect(int mode)
+        {
+            genderSelect.Open(modes[mode].startScript, CastFor(mode), n => RoleOf(mode, n), g => NewGame(mode, g));
+        }
+
+        public void NewGame(int mode) => NewGame(mode, null);
+
+        public void NewGame(int mode, Dictionary<string, int> genders)
         {
             string startScript = modes[mode].startScript;
             var s = VNScript.Load(startScript);
             if (s == null) return;
             ResetGameState();
             modeIndex = mode;
+            if (genders != null)
+            {
+                foreach (var kv in genders) variables[GenderVar(kv.Key)] = kv.Value;
+                // 승주가 되기 모드에선 플레이어 = 승주 → {남|여} 도 승주 성별을 따름
+                if (IsHaremMode(mode) && genders.TryGetValue("승주", out int sg)) variables[genderVariable] = sg;
+            }
 
             int start = 0;
             if (!string.IsNullOrEmpty(startLabel) && (startLabel.Contains(":") || !s.labels.TryGetValue(startLabel, out start)))
@@ -489,8 +535,9 @@ namespace VN
                     if (a.Length == 0 || a[0] == "off") stage.HideCG(d);
                     else
                     {
-                        stage.ShowCG(a[0], d);
-                        VNUnlocks.UnlockCG(a[0]); // 갤러리에 해금
+                        string cg = ResolveCG(a[0]); // 남자 버전이 있으면 그걸로
+                        stage.ShowCG(cg, d);
+                        VNUnlocks.UnlockCG(cg); // 갤러리에 해금
                     }
                     return d;
                 }
@@ -622,13 +669,45 @@ namespace VN
             return v;
         }
 
-        /// <summary>{남자일때|여자일때} → 성별에 맞는 말,  {변수} → 변수 값</summary>
+        /// <summary>
+        /// {남자일때|여자일때} → '나'의 성별에 맞는 말,  {승주:남자일때|여자일때} → 승주의 성별에 맞는 말,
+        /// {변수} → 변수 값
+        /// </summary>
         string Interpolate(string text)
         {
-            bool female = GetVariable(genderVariable) == 2;
-            text = genderRegex.Replace(text, m => female ? m.Groups[2].Value : m.Groups[1].Value);
+            text = genderRegex.Replace(text, m =>
+            {
+                string who = "나", male = m.Groups[1].Value, female = m.Groups[2].Value;
+                int colon = male.IndexOf(':');
+                if (colon > 0 && Array.IndexOf(AllCast, male.Substring(0, colon).Trim()) >= 0)
+                {
+                    who = male.Substring(0, colon).Trim();
+                    male = male.Substring(colon + 1);
+                }
+                return IsMale(who) ? male : female;
+            });
             return interpolateRegex.Replace(text, m =>
                 variables.TryGetValue(m.Groups[1].Value, out int v) ? v.ToString() : m.Value);
+        }
+
+        /// <summary>
+        /// CG 이름의 앞부분이 등장인물(예: 승현_농구)이고 그 사람이 남자면 "승현_농구_남" 을 씀 (파일이 있을 때만).
+        /// 하렘_엔딩은 친구 넷 중 셋 이상이 남자면 "하렘_엔딩_남".
+        /// </summary>
+        public string ResolveCG(string name)
+        {
+            int us = name.IndexOf('_');
+            string owner = us > 0 ? name.Substring(0, us) : name;
+            bool male;
+            if (owner == "하렘")
+            {
+                int n = 0;
+                foreach (var f in new[] { "승현", "서연", "기주", "수민" }) if (IsMale(f)) n++;
+                male = n >= 3;
+            }
+            else male = Array.IndexOf(AllCast, owner) >= 0 && IsMale(owner);
+            if (male && VNStage.LoadSprite("CG/" + name + "_남", false) != null) return name + "_남";
+            return name;
         }
 
         float Error(VNLine l, string msg)
