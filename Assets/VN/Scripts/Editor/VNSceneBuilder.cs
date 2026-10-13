@@ -257,8 +257,7 @@ namespace VN.EditorTools
             qhl.childAlignment = TextAnchor.MiddleLeft;
             qhl.childControlWidth = qhl.childControlHeight = true;
             qhl.childForceExpandWidth = qhl.childForceExpandHeight = false;
-            box.quickSaveButton = QuickButton(qm, "Q.저장");
-            box.quickLoadButton = QuickButton(qm, "Q.불러오기");
+            // 빠른 저장/불러오기 버튼은 사용자 요청으로 뺌 (상단 버튼이 너무 많음)
             box.saveButton = QuickButton(qm, "저장");
             box.loadButton = QuickButton(qm, "불러오기");
             box.logButton = QuickButton(qm, "로그");

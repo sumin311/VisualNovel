@@ -133,8 +133,9 @@ namespace VN
         {
             clickCatcher.onClick.AddListener(OnScreenClick);
 
-            dialogue.quickSaveButton.onClick.AddListener(QuickSave);
-            dialogue.quickLoadButton.onClick.AddListener(QuickLoad);
+            // 빠른 저장/불러오기 버튼은 없어도 됨 (씬에서 꺼 두거나 지워도 오류 없게)
+            if (dialogue.quickSaveButton != null) dialogue.quickSaveButton.onClick.AddListener(QuickSave);
+            if (dialogue.quickLoadButton != null) dialogue.quickLoadButton.onClick.AddListener(QuickLoad);
             dialogue.saveButton.onClick.AddListener(() => OpenMenu(VNMenuKind.Save));
             dialogue.loadButton.onClick.AddListener(() => OpenMenu(VNMenuKind.Load));
             dialogue.logButton.onClick.AddListener(() => OpenMenu(VNMenuKind.Log));
