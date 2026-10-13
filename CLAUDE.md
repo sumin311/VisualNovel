@@ -11,6 +11,28 @@
 - 패키지: uGUI(Legacy `UnityEngine.UI.Text`), TextMeshPro 미사용. 폰트: `Assets/Fonts/` — UI는 Griun_Yeeun-Rg.ttf (`VNEngine.uiFont`), 대사·로그는 NanumBarunpenB.ttf (`VNEngine.dialogueFont`, `VNDialogueFont` 표시 붙은 Text). 비면 OS 폰트로 대체. 두 폰트 모두 저장소에 포함 (그리운 예은체: 사용 범위 제한 없음, 폰트 파일 개작·수정·판매만 금지 — 파일을 수정하지 말 것)
 - 플랫폼: PC(윈도우) + **웹(WebGL) — 친구들이 아이폰이라 웹 링크로 배포**. **main에 Push하면 GitHub Actions(`.github/workflows/webgl.yml`, game-ci/unity-builder, `VNBuildTools.BuildWebGLBatch`)가 자동 빌드 → `Builds/WebGL`을 GitHub Pages(Source: GitHub Actions)에 배포** https://sumin311.github.io/VisualNovel/ . 시크릿 UNITY_LICENSE/UNITY_EMAIL/UNITY_PASSWORD 필요(사용자가 직접 등록). `docs/`는 예전 수동 방식(`VN > 웹 버전 빌드`가 복사)의 잔재로, 자동 배포가 확인되면 지워도 됨 (템플릿 `Assets/WebGLTemplates/VN`, Gzip+decompressionFallback). 웹 세이브는 PlayerPrefs. 폰 대응: `VNPlatformAdjust`(폰 확대/숨김), `VNSafeArea`, `VNRotateHint`(세로면 안내), 퀵메뉴 "숨기기" 버튼
 
+## GitHub · 웹 배포 메모 (PC 여러 대에서 이어 작업할 때 읽기)
+
+**GitHub 관련 설정·절차가 바뀌면 이 섹션을 바로 고치고, 업데이트 기록에 한 줄 추가할 것** (사용자 요청). 메모리 폴더는 PC마다 따로라서 이 파일에 적어야 다른 PC에서도 보임. 시각은 서울 기준(KST)으로 적기.
+
+- 사용자 PC 2대(집/다른 곳)에서 번갈아 작업. 둘 다 프로젝트 경로는 `C:\UnityProjects\VisualNovel`
+- **작업 순서**: 시작할 때 GitHub Desktop에서 `Fetch origin` → `Pull origin` (Unity 열기 전에) → 작업 → Commit → `Push origin`
+- **Claude는 commit까지만** 하고, push는 사용자가 GitHub Desktop에서 직접 누름 (Claude 쪽 git push는 인증이 없어 실패하고, 저장된 자격 증명을 건드리면 안 됨). commit 후엔 "GitHub Desktop에서 Push origin 눌러 주세요"라고 안내
+- **자동 빌드**: main에 push → GitHub Actions "웹 버전 자동 빌드"(`.github/workflows/webgl.yml`) 약 10분 → GitHub Pages 배포. `docs/**`, `*.md`, `Tools/**`만 바뀐 push는 빌드 안 함 (Actions 탭에서 `Run workflow`로 수동 실행 가능)
+  - 진행 확인(로그인 불필요): `https://api.github.com/repos/sumin311/VisualNovel/actions/runs` (status/conclusion), 실패 시 `.../actions/runs/{id}/jobs`에서 실패한 단계 확인
+  - 웹이 안 바뀐 것 같으면 Ctrl+F5 (폰은 브라우저 재시작)
+- **저장소 설정 (완료됨)**: 공개 저장소 / Settings → Pages → Source = **GitHub Actions** / Settings → Secrets → Actions에 `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD` 등록됨 (사용자가 직접 입력. Claude는 비밀번호·라이선스 내용을 어디에도 입력하지 말 것)
+  - `UNITY_LICENSE` = 개인 라이선스 파일 `C:\ProgramData\Unity\Unity_lic.ulf` 전체 내용 (ProgramData는 숨김 폴더). Unity 라이선스가 갱신·만료되면 빌드가 라이선스 오류로 실패 → 새 .ulf 내용으로 시크릿 교체
+  - 새 PC에서 배치 모드 검사를 하려면 그 PC의 Unity Hub에서도 개인 라이선스를 받아야 함 (없으면 exit 199)
+- `.gitignore`: Library/Temp/Builds 등 제외. 폰트 2개는 저장소에 포함
+
+### 업데이트 기록 (KST)
+
+- 2026-10-12 저장소 생성, 공개 전환, 모드 2개·7일 뼈대
+- 2026-10-13 01:02 웹 버전(docs/ 수동 방식) 추가 / 13:08 그리운 예은체 폰트 저장소에 추가
+- 2026-10-13 14:58 GitHub Actions 자동 빌드 도입 (첫 빌드 성공 15:10) / 15:11 빠른 저장·불러오기 버튼 제거
+- 2026-10-13 15:53~16:06 등장인물 성별 선택, 남자 스탠딩·CG, 공주님/왕자님 자동 변환 → 16:16 웹 반영
+
 ## 게임 설정 (사용자가 정한 것 — 바꾸지 말 것)
 
 - 장르: 여주인공 **승주**를 중심으로 한 연애 시뮬레이션. 임시 제목 **모두의 승주**
