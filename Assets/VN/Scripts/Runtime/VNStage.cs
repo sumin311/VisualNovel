@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,6 +17,8 @@ namespace VN
         [Header("캐릭터 표시")]
         [Tooltip("스탠딩 이미지 높이 (기준 해상도 1920x1080)")]
         public float characterHeight = 1000f;
+        [Tooltip("스탠딩 발끝 높이 (0 = 화면 맨 아래). 세로 화면에선 VNOrientation 이 바꿈")]
+        public float characterBottom = 0f;
         [Tooltip("말하지 않는 캐릭터를 어둡게 표시")]
         public bool dimInactiveCharacters = true;
         public Color inactiveTint = new Color(0.6f, 0.6f, 0.65f, 1f);
@@ -57,6 +59,80 @@ namespace VN
         readonly List<string> order = new List<string>();
         Coroutine bgRoutine, cgRoutine;
         Sprite pendingBg;
+        RawImage cgBackdrop;      // CG 뒤에 흐리게 깔리는 같은 그림 (세로 화면에서 CG 위아래 빈 곳)
+        RenderTexture cgBlurred;
+
+        void Awake()
+        {
+            // 배경은 화면 비율이 달라도 찌그러지지 않게 꽉 채우고 넘치는 부분은 잘라냄
+            Cover(backgroundBack);
+            Cover(backgroundFront);
+
+            // CG 는 잘리지 않게 비율 유지 + 뒤에 흐린 배경
+            cgImage.preserveAspect = true;
+            var go = new GameObject("CGBackdrop", typeof(RectTransform), typeof(RawImage));
+            go.layer = gameObject.layer;
+            go.transform.SetParent(cgImage.transform.parent, false);
+            go.transform.SetSiblingIndex(cgImage.transform.GetSiblingIndex());
+            cgBackdrop = go.GetComponent<RawImage>();
+            cgBackdrop.raycastTarget = false;
+            cgBackdrop.enabled = false;
+            go.AddComponent<AspectRatioFitter>().aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+        }
+
+        void Update()
+        {
+            if (cgBackdrop.enabled != cgImage.enabled) cgBackdrop.enabled = cgImage.enabled;
+            if (cgBackdrop.enabled)
+                cgBackdrop.color = new Color(0.78f, 0.74f, 0.76f, cgImage.color.a);
+        }
+
+        void OnDestroy()
+        {
+            if (cgBlurred != null) cgBlurred.Release();
+        }
+
+        /// <summary>이미지를 부모 영역에 꽉 차게 (비율 유지, 넘치는 부분은 잘림)</summary>
+        public static void Cover(Image img)
+        {
+            var f = img.GetComponent<AspectRatioFitter>();
+            if (f == null)
+            {
+                f = img.gameObject.AddComponent<AspectRatioFitter>();
+                f.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            }
+            if (img.sprite != null) f.aspectRatio = img.sprite.rect.width / img.sprite.rect.height;
+        }
+
+        /// <summary>CG 를 아주 작게 줄였다가 늘려서 흐린 그림을 만듦</summary>
+        void SetBackdrop(Sprite sp)
+        {
+            if (cgBlurred != null) { cgBlurred.Release(); cgBlurred = null; }
+            cgBackdrop.texture = null;
+            if (sp == null) return;
+            // 반씩 줄였다가(1/32) 다시 반씩 키우면(1/4) 부드럽게 번진 그림이 됨
+            var src = sp.texture;
+            Texture cur = src;
+            var temps = new List<RenderTexture>();
+            int w = src.width, h = src.height;
+            for (int i = 0; i < 5; i++) { w = Mathf.Max(1, w / 2); h = Mathf.Max(1, h / 2); cur = Step(cur, w, h, temps); }
+            for (int i = 0; i < 2; i++) { w *= 2; h *= 2; cur = Step(cur, w, h, temps); }
+            cgBlurred = new RenderTexture(w, h, 0) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            Graphics.Blit(cur, cgBlurred);
+            foreach (var t in temps) RenderTexture.ReleaseTemporary(t);
+            cgBackdrop.texture = cgBlurred;
+            cgBackdrop.GetComponent<AspectRatioFitter>().aspectRatio = (float)src.width / src.height;
+        }
+
+        static Texture Step(Texture from, int w, int h, List<RenderTexture> temps)
+        {
+            var rt = RenderTexture.GetTemporary(w, h);
+            rt.filterMode = FilterMode.Bilinear;
+            rt.wrapMode = TextureWrapMode.Clamp;
+            Graphics.Blit(from, rt);
+            temps.Add(rt);
+            return rt;
+        }
 
         // ───────────────────────── 이미지 로드 ─────────────────────────
 
@@ -281,15 +357,28 @@ namespace VN
 
             c.image.sprite = sp;
             c.image.enabled = sp != null;
+            ApplySize(c);
+        }
+
+        void ApplySize(Character c)
+        {
+            var sp = c.image.sprite;
             float aspect = sp != null ? sp.rect.width / sp.rect.height : 0.5f;
             c.rect.sizeDelta = new Vector2(characterHeight * aspect, characterHeight);
         }
 
-        static void Place(Character c, float x, float scaleX, float scaleY)
+        /// <summary>크기·배치 설정이 바뀌었을 때 (화면을 돌렸을 때) 무대 위 캐릭터를 다시 세움</summary>
+        public void Relayout()
+        {
+            foreach (var c in characters.Values) ApplySize(c);
+            Arrange(0f);
+        }
+
+        void Place(Character c, float x, float scaleX, float scaleY)
         {
             c.rect.anchorMin = c.rect.anchorMax = new Vector2(x, 0f);
             c.rect.pivot = new Vector2(0.5f, 0f);
-            c.rect.anchoredPosition = Vector2.zero;
+            c.rect.anchoredPosition = new Vector2(0f, characterBottom);
             c.rect.localScale = new Vector3(scaleX, scaleY, 1f);
         }
 
@@ -335,6 +424,7 @@ namespace VN
             if (cgRoutine != null) StopCoroutine(cgRoutine);
             cgImage.sprite = sp;
             cgImage.enabled = sp != null;
+            SetBackdrop(sp);
             cgRoutine = StartCoroutine(Fade(cgImage, d > 0f ? 0f : 1f, 1f, d));
         }
 
@@ -368,6 +458,7 @@ namespace VN
         {
             img.sprite = sp;
             img.enabled = sp != null;
+            if (sp != null && img.GetComponent<AspectRatioFitter>() != null) Cover(img);
             SetAlpha(img, alpha);
         }
 

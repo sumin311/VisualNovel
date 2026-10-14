@@ -52,6 +52,7 @@ namespace VN
             var sp = VNStage.LoadSprite("Backgrounds/" + backgroundName);
             background.sprite = sp;
             background.enabled = sp != null;
+            VNStage.Cover(background); // 세로 화면에서도 찌그러지지 않게
 
             if (characterSlots != null)
                 for (int i = 0; i < characterSlots.Length; i++)

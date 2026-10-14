@@ -106,6 +106,7 @@ namespace VN
         void Start()
         {
             genderSelect = VNGenderSelect.Create(titleMenu);
+            VNOrientation.Create(this, stage.GetComponentInParent<Canvas>()); // 폰 세로 화면 배치
             WireButtons();
             audioPlayer.ApplyVolume();
             CloseAllMenus();

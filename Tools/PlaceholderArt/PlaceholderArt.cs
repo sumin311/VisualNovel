@@ -248,11 +248,11 @@ public static class PlaceholderArt
                 if (e == "웃음") return L("happy", "raised", "grin", "peace");
                 if (e == "화남") { k = L("open", "angry", "frown", "sides"); k.Anger = true; return k; }
                 k = L("open", "worried", "wavy", "sides"); k.Blush = true; k.Sweat = true; k.LookX = -0.9f; k.LookY = 0.6f; return k;
-            case "서연":
-                if (e == "기본") return L("open", "normal", "smile", "blanketHold");
-                if (e == "웃음") return L("happy", "raised", "open", "blanketHold");
-                if (e == "화남") { k = L("open", "angry", "pout", "blanketHold"); k.Anger = true; return k; }
-                k = L("open", "worried", "none", "blanketMouth"); k.Blush = true; k.LookX = -0.9f; k.LookY = 0.4f; return k;
+            case "서연": // 겉보기엔 도도, 웃으면 무너지는 반전 매력. 늘 당근 인형을 안고 있음
+                if (e == "기본") return L("open", "flat", "line", "carrot");
+                if (e == "웃음") { k = L("happy", "raised", "grin", "carrot"); k.Sweat = true; return k; }
+                if (e == "화남") { k = L("open", "angry", "pout", "carrot"); k.Anger = true; return k; }
+                k = L("open", "worried", "none", "carrotMouth"); k.Blush = true; k.LookX = -0.9f; k.LookY = 0.4f; return k;
             case "기주":
                 if (e == "기본") return L("open", "normal", "smug", "sides");
                 if (e == "웃음") return L("wink", "raised", "grin", "sides");
@@ -318,12 +318,13 @@ public static class PlaceholderArt
         g.Restore(bs);
         hs = HeadOn(g);
         Head(g, s, k);
-        if (k.Arms == "blanketMouth")
-        {
-            BlanketMouth(g);
-            Hand(g, 326, 470, -80, 0.95f, "fist", -1); Hand(g, 484, 466, -100, 0.95f, "fist", 1);
-        }
         FrontHair(g, s);
+        if (BaseHair(s) == "giju" && !s.Male) PearlEarring(g, 566, 424);
+        if (k.Arms == "carrotMouth")
+        {
+            Carrot(g, 392, 520, 96, 0.72f);
+            Hand(g, 300, 520, -10, 0.95f, "fist", 1); Hand(g, 492, 510, 190, 0.95f, "fist", -1);
+        }
         Brows(g, s, k);
         Effects(g, k);
         g.Restore(hs);
@@ -345,9 +346,8 @@ public static class PlaceholderArt
                 return new PB().M(408, 116).Q(214, 122, 216, 380).Q(210, 520, 196, 630)
                     .Q(190, 678, 230, 686).Q(258, 704, 288, 678).L(530, 678).Q(560, 704, 590, 686).Q(630, 678, 620, 630)
                     .Q(602, 520, 602, 380).Q(604, 122, 408, 116).Z();
-            case "seoyeon":
-                return new PB().M(408, 116).Q(210, 122, 214, 380).Q(184, 520, 212, 640).Q(240, 760, 202, 880).Q(176, 1000, 226, 1092)
-                    .L(600, 1092).Q(650, 1000, 622, 880).Q(586, 760, 614, 640).Q(642, 520, 606, 380).Q(606, 122, 408, 116).Z();
+            case "seoyeon": // 포니테일이라 뒷머리는 목덜미까지만 (꼬리는 BackHair 에서)
+                return new PB().M(408, 116).Q(214, 122, 218, 360).Q(220, 470, 250, 540).L(566, 540).Q(596, 470, 598, 360).Q(602, 122, 408, 116).Z();
             case "giju":
                 return new PB().M(408, 116).Q(218, 122, 224, 330).Q(220, 470, 246, 568).L(570, 568).Q(594, 470, 592, 330).Q(598, 122, 408, 116).Z();
             case "m_seungju":
@@ -387,8 +387,14 @@ public static class PlaceholderArt
         }
         if (s.Hair == "seoyeon")
         {
-            Line(g, A(s.HairLine, 130), 2f, 222, 600, 236, 760, 210, 900, 230, 1060);
-            Line(g, A(s.HairLine, 130), 2f, 600, 600, 590, 760, 612, 900, 596, 1060);
+            // 뒤통수 아래쪽에서 묶은, 살짝 웨이브 진 긴 포니테일
+            var tail = new PB().M(584, 236).Q(690, 262, 700, 400).Q(712, 520, 676, 620).Q(650, 700, 688, 790).Q(712, 860, 650, 940)
+                .L(640, 906).Q(664, 850, 640, 790).Q(612, 700, 634, 610).Q(660, 500, 640, 400).Q(626, 320, 572, 300).Z();
+            HairFill(g, s, tail, -12, -4);
+            Clip(g, tail, () => F(g, new PB().M(660, 300).Q(692, 400, 676, 540).L(662, 540).Q(674, 400, 646, 304).Z(), s.HairLt));
+            Line(g, A(s.HairLine, 150), 2f, 610, 300, 668, 420, 652, 600, 664, 760, 656, 880);
+            Line(g, A(s.HairLine, 150), 2f, 640, 290, 690, 400, 680, 560, 690, 720);
+            FS(g, RRect(570, 262, 34, 44, 10), H("#3A3846"), LINE, 2.5f); // 머리끈
         }
         if (s.Hair == "sumin")
         {
@@ -400,7 +406,7 @@ public static class PlaceholderArt
             Line(g, A(s.HairLine, 160), 2f, 600, 260, 652, 420, 650, 640, 626, 840);
             Line(g, A(s.HairLine, 160), 2f, 620, 230, 676, 380, 676, 560, 652, 760);
         }
-        if (s.Hair == "m_sumin")
+        if (s.Hair == "m_sumin" || s.Hair == "m_seoyeon")
         {
             // 짧은 꽁지머리
             var tail = new PB().M(566, 166).Q(650, 170, 662, 270).Q(672, 380, 640, 480).L(620, 470).Q(636, 370, 622, 280).Q(608, 226, 558, 232).Z();
@@ -610,11 +616,39 @@ public static class PlaceholderArt
         Fringe(g, 116, 700, 1310);
     }
 
-    static void BlanketMouth(Graphics g)
+    /// <summary>서연의 당근 인형 (주황 몸통 + 초록 잎 + 웃는 얼굴). 로컬 좌표: 잎이 위(-Y), 끝이 아래(+Y)</summary>
+    static void Carrot(Graphics g, float cx, float cy, float ang, float sc)
     {
-        var p = new PB().M(298, 458).Q(372, 438, 452, 446).Q(504, 454, 514, 502).Q(514, 562, 482, 604).L(318, 604).Q(290, 540, 298, 458).Z();
-        BlanketFill(g, p);
-        Line(g, BLANKET_LT, 5f, 304, 462, 372, 446, 450, 452, 506, 470);
+        var st = g.Save(); g.TranslateTransform(cx, cy); g.RotateTransform(ang); g.ScaleTransform(sc, sc);
+        var leafC = H("#8FD14F"); var leafSh = H("#6DB33A"); var leafLine = H("#3F7A24");
+        foreach (var lf in new[] { new float[] { -34, -150, -62, -232 }, new float[] { 0, -156, 2, -248 }, new float[] { 34, -150, 64, -228 } })
+        {
+            var leaf = Capsule(lf[0], lf[1], lf[2], lf[3], 40);
+            Cel(g, leaf, leafC, leafSh, -6, -4); S(g, leaf, leafLine, 3f);
+            Line(g, A(leafLine, 140), 2f, lf[0], lf[1] - 10, (lf[0] + lf[2]) / 2, (lf[1] + lf[3]) / 2);
+        }
+        var body = new PB().M(-80, -120).Q(0, -168, 80, -120).Q(104, -40, 66, 70).Q(36, 150, 6, 176).Q(-20, 160, -44, 90).Q(-100, -20, -80, -120).Z();
+        Cel(g, body, H("#F59A3C"), H("#DA7524"), -14, -6);
+        Clip(g, body, () =>
+        {
+            F(g, Ell(-36, -96, 50, 26), A(Color.White, 70));
+            foreach (var r in new[] { new float[] { -84, -30, -58, -36 }, new float[] { 86, 10, 62, 4 }, new float[] { -60, 66, -40, 60 }, new float[] { 70, 80, 48, 74 } })
+                Line(g, A(H("#B85A18"), 200), 3f, r[0], r[1], r[2], r[3]);
+        });
+        S(g, body, H("#8A4612"), 3f);
+        // 얼굴
+        F(g, Ell(-26, -56, 14, 16), H("#2A1E1A")); F(g, Ell(26, -56, 14, 16), H("#2A1E1A"));
+        Line(g, H("#2A1E1A"), 4f, -24, -26, 0, -10, 24, -26);
+        F(g, Ell(-46, -34, 22, 12), A(BLUSH, 150)); F(g, Ell(46, -34, 22, 12), A(BLUSH, 150));
+        g.Restore(st);
+    }
+
+    /// <summary>기주의 작은 진주 귀걸이 (부잣집 아가씨 느낌)</summary>
+    static void PearlEarring(Graphics g, float x, float y)
+    {
+        Line(g, GOLD_DK, 2.5f, x - 2, y - 22, x, y - 8);
+        FS(g, Ell(x, y, 20, 20), H("#F7F2EA"), H("#B6ABA0"), 2f);
+        F(g, Ell(x - 4, y - 4, 7, 7), Color.White);
     }
 
     static void PhonesBand(Graphics g)
@@ -701,8 +735,12 @@ public static class PlaceholderArt
                     Arm(g, s, 74, 58, "fist", -1, 1f, 566, 672, 620, 772, 632, 690, HX(606), HY(540), HX(578), HY(452));
                 }
                 break;
-            case "blanketHold":
-                if (layer == 1) { Hand(g, 334, 800, 95, 0.95f, "fist", 1); Hand(g, 470, 800, 85, 0.95f, "fist", -1); }
+            case "carrot": // 당근 인형을 가슴 앞에 안고 있음 (담요 위)
+                if (layer == 1)
+                {
+                    Carrot(g, 404, 850, -14, 1f);
+                    Hand(g, 300, 860, -6, 0.95f, "fist", 1); Hand(g, 512, 836, 186, 0.95f, "fist", -1);
+                }
                 break;
             case "blanketOpen":
                 if (layer == 0)
@@ -1077,9 +1115,9 @@ public static class PlaceholderArt
                 locks.Add(new PB().M(262, 330).Q(224, 410, 236, 500).Q(250, 580, 222, 640).Q(212, 670, 236, 678).Q(264, 650, 262, 590).Q(268, 520, 266, 450).Q(266, 380, 282, 336).Z());
                 locks.Add(new PB().M(552, 320).Q(594, 410, 584, 500).Q(572, 580, 600, 640).Q(608, 672, 584, 678).Q(558, 650, 558, 590).Q(552, 520, 552, 450).Q(550, 380, 534, 330).Z());
                 break;
-            case "seoyeon":
-                locks.Add(new PB().M(262, 330).Q(218, 440, 234, 560).Q(250, 660, 220, 760).Q(204, 842, 238, 886).Q(260, 860, 256, 800).Q(270, 700, 268, 600).Q(270, 460, 282, 336).Z());
-                locks.Add(new PB().M(552, 320).Q(598, 440, 582, 560).Q(566, 660, 598, 760).Q(614, 842, 580, 886).Q(558, 860, 562, 800).Q(552, 700, 556, 600).Q(552, 460, 534, 330).Z());
+            case "seoyeon": // 포니테일로 묶고 남은 옆머리 (턱 아래까지, 살짝 웨이브)
+                locks.Add(new PB().M(262, 330).Q(226, 420, 240, 500).Q(252, 560, 232, 610).Q(224, 640, 246, 646).Q(266, 616, 264, 560).Q(270, 470, 282, 336).Z());
+                locks.Add(new PB().M(552, 320).Q(590, 420, 578, 500).Q(568, 560, 590, 610).Q(598, 640, 576, 646).Q(556, 616, 558, 560).Q(552, 470, 534, 330).Z());
                 break;
             case "giju":
                 locks.Add(new PB().M(258, 296).Q(228, 420, 240, 550).L(298, 558).Q(282, 440, 288, 316).Z());
@@ -1116,6 +1154,11 @@ public static class PlaceholderArt
             F(g, new PB().M(270, 228 + y).Q(404, 168 + y, 546, 232 + y).L(542, 232 + y + bw).Q(404, 170 + y + bw, 274, 228 + y + bw).Z(), A(s.HairLt, 210));
             F(g, new PB().M(300, 214 + y).L(318, 204 + y).L(330, 246 + y).L(312, 250 + y).Z(), s.HairC);
             F(g, new PB().M(452, 204 + y).L(470, 208 + y).L(472, 244 + y).L(454, 242 + y).Z(), s.HairC);
+            if (BaseHair(s) == "giju") // 윤기 나는 생머리 (귀티)
+            {
+                var gloss = A(H("#9A94B8"), 200);
+                foreach (float gx in new float[] { 296, 340, 384, 428, 472, 516 }) Line(g, gloss, 3f, gx, 150 + Math.Abs(gx - 406) * 0.3f, gx + 4, 196 + Math.Abs(gx - 406) * 0.3f);
+            }
         });
         // 머리결
         Color sl = A(s.HairLine, 150);
@@ -1427,7 +1470,7 @@ public static class PlaceholderArt
             StringLights(g, -40, 260, 1960, 280, 100, 6);
             var a = CG("happy", "raised", "grin", "peace", true);
             var b = CG("open", "raised", "o", "phone", true); b.Sparkle = true;
-            var c = CG("happy", "raised", "open", "blanketHold", true);
+            var c = CG("happy", "raised", "open", "carrot", true);
             var dd = CG("wink", "raised", "grin", "sides", true);
             Place(g, Find("수민"), b, 780, 160, 0.78f, true);
             Place(g, Find("서연"), c, 1160, 160, 0.78f, false);
@@ -1498,6 +1541,7 @@ public static class PlaceholderArt
             FS(g, RRect(1300, 930, 90, 110, 14), H("#F2EEE6"), LINE, 3f);
             FS(g, Ell(1345, 936, 80, 18), H("#7A4A30"), LINE, 2f);
             Line(g, H("#F2C44A"), 8f, 880, 1040, 1060, 990);
+            Carrot(g, 1560, 970, 72, 0.8f); // 책상 위에 눕혀 둔 당근 인형
             Particles(g, 30, H("#FFF1C8"), 13);
             Caption(g, "임시 CG · 서연_도서관");
         };

@@ -38,6 +38,7 @@ namespace VN
 
         void Awake()
         {
+            MakeScrollable();
             closeButton.onClick.AddListener(Close);
             cgTabButton.onClick.AddListener(() => ShowTab(true));
             endingTabButton.onClick.AddListener(() => ShowTab(false));
@@ -54,6 +55,42 @@ namespace VN
 
         public void Close() => gameObject.SetActive(false);
         public void CloseViewer() => viewer.SetActive(false);
+
+        /// <summary>CG 가 많아져도 창 밖으로 넘치지 않게, CG 칸 묶음을 위아래로 스크롤되는 영역에 넣음</summary>
+        void MakeScrollable()
+        {
+            var page = (RectTransform)cgPage.transform;
+            if (page.GetComponentInParent<ScrollRect>() != null) return;
+
+            var scroll = new GameObject("CGScroll", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect))
+                .GetComponent<RectTransform>();
+            scroll.gameObject.layer = page.gameObject.layer;
+            scroll.SetParent(page.parent, false);
+            scroll.SetSiblingIndex(page.GetSiblingIndex());
+            scroll.anchorMin = page.anchorMin;
+            scroll.anchorMax = page.anchorMax;
+            scroll.pivot = page.pivot;
+            scroll.offsetMin = page.offsetMin;
+            scroll.offsetMax = page.offsetMax;
+            scroll.GetComponent<Image>().color = new Color(0, 0, 0, 0); // 빈 곳을 끌어도 스크롤되게
+
+            page.SetParent(scroll, false);
+            page.anchorMin = new Vector2(0, 1);
+            page.anchorMax = new Vector2(1, 1);
+            page.pivot = new Vector2(0.5f, 1);
+            page.offsetMin = page.offsetMax = Vector2.zero;
+            var grid = page.GetComponent<GridLayoutGroup>();
+            if (grid != null) grid.padding = new RectOffset(0, 0, 8, 8);
+            page.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var sr = scroll.GetComponent<ScrollRect>();
+            sr.content = page;
+            sr.viewport = scroll;
+            sr.horizontal = false;
+            sr.movementType = ScrollRect.MovementType.Clamped;
+            sr.scrollSensitivity = 40;
+            cgPage = scroll.gameObject;
+        }
 
         void ShowTab(bool cg)
         {

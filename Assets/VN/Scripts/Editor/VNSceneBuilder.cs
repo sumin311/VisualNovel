@@ -122,7 +122,7 @@ namespace VN.EditorTools
             engine.backlog = BuildBacklog(root);
             engine.gallery = BuildGallery(root);
             engine.confirmDialog = BuildConfirm(root);
-            BuildRotateHint(root);
+            // 세로 화면 배치는 실행 중에 VNOrientation 이 맡음 (씬은 가로 배치로 만듦)
 
             engine.saveLoadMenu.gameObject.SetActive(false);
             engine.settingsMenu.gameObject.SetActive(false);
@@ -138,9 +138,9 @@ namespace VN.EditorTools
             PlayerSettings.defaultScreenWidth = 1600;
             PlayerSettings.defaultScreenHeight = 900;
             PlayerSettings.resizableWindow = true;
-            // 폰 앱으로 만들 때는 가로 화면 고정
+            // 폰 앱으로 만들 때도 가로·세로 둘 다 (세로면 VNOrientation 이 세로 배치로 바꿈)
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
-            PlayerSettings.allowedAutorotateToPortrait = false;
+            PlayerSettings.allowedAutorotateToPortrait = true;
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
             PlayerSettings.allowedAutorotateToLandscapeLeft = true;
             PlayerSettings.allowedAutorotateToLandscapeRight = true;
@@ -714,25 +714,6 @@ namespace VN.EditorTools
             dlg.noButton = WhiteButton(win, "No", "아니오", 28, 64);
             Place((RectTransform)dlg.noButton.transform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(125, 40), new Vector2(220, 64));
             return dlg;
-        }
-
-        /// <summary>폰을 세로로 들면 덮어 띄우는 "가로로 돌려 주세요" 안내</summary>
-        static void BuildRotateHint(Transform root)
-        {
-            var rt = Child("RotateHint", root);
-            Stretch(rt);
-            var hint = rt.gameObject.AddComponent<VNRotateHint>();
-            var overlay = Child("Overlay", rt);
-            Stretch(overlay);
-            Img(overlay, TitleBg).raycastTarget = true;
-            var icon = Img(Child("Icon", overlay), Pink, arrow);
-            icon.type = Image.Type.Simple;
-            Place(icon.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 90), new Vector2(120, 120));
-            icon.rectTransform.localEulerAngles = new Vector3(0, 0, 90);
-            var t = Txt(overlay, "Text", "화면을 가로로 돌려 주세요", 56, TextAnchor.MiddleCenter, Brown, FontStyle.Bold);
-            Place(t.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -60), new Vector2(1400, 100));
-            overlay.gameObject.SetActive(false);
-            hint.overlay = overlay.gameObject;
         }
 
         // ───────────────────────── 메뉴 창 틀 ─────────────────────────

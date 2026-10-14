@@ -9,7 +9,7 @@
 - 저장소: https://github.com/sumin311/VisualNovel (공개). 사용자는 GitHub Desktop으로 commit/push/pull 함
 - Git이 PATH에 없을 수 있음. GitHub Desktop 내장 git: `%LOCALAPPDATA%\GitHubDesktop\app-*\resources\app\git\cmd\git.exe`
 - 패키지: uGUI(Legacy `UnityEngine.UI.Text`), TextMeshPro 미사용. 폰트: `Assets/Fonts/` — UI는 Griun_Yeeun-Rg.ttf (`VNEngine.uiFont`), 대사·로그는 NanumBarunpenB.ttf (`VNEngine.dialogueFont`, `VNDialogueFont` 표시 붙은 Text). 비면 OS 폰트로 대체. 두 폰트 모두 저장소에 포함 (그리운 예은체: 사용 범위 제한 없음, 폰트 파일 개작·수정·판매만 금지 — 파일을 수정하지 말 것)
-- 플랫폼: PC(윈도우) + **웹(WebGL) — 친구들이 아이폰이라 웹 링크로 배포**. **main에 Push하면 GitHub Actions(`.github/workflows/webgl.yml`, game-ci/unity-builder, `VNBuildTools.BuildWebGLBatch`)가 자동 빌드 → `Builds/WebGL`을 GitHub Pages(Source: GitHub Actions)에 배포** https://sumin311.github.io/VisualNovel/ . 시크릿 UNITY_LICENSE/UNITY_EMAIL/UNITY_PASSWORD 필요(사용자가 직접 등록). `docs/`는 예전 수동 방식(`VN > 웹 버전 빌드`가 복사)의 잔재로, 자동 배포가 확인되면 지워도 됨 (템플릿 `Assets/WebGLTemplates/VN`, Gzip+decompressionFallback). 웹 세이브는 PlayerPrefs. 폰 대응: `VNPlatformAdjust`(폰 확대/숨김), `VNSafeArea`, `VNRotateHint`(세로면 안내), 퀵메뉴 "숨기기" 버튼
+- 플랫폼: PC(윈도우) + **웹(WebGL) — 친구들이 아이폰이라 웹 링크로 배포**. **main에 Push하면 GitHub Actions(`.github/workflows/webgl.yml`, game-ci/unity-builder, `VNBuildTools.BuildWebGLBatch`)가 자동 빌드 → `Builds/WebGL`을 GitHub Pages(Source: GitHub Actions)에 배포** https://sumin311.github.io/VisualNovel/ . 시크릿 UNITY_LICENSE/UNITY_EMAIL/UNITY_PASSWORD 필요(사용자가 직접 등록). `docs/`는 예전 수동 방식(`VN > 웹 버전 빌드`가 복사)의 잔재로, 자동 배포가 확인되면 지워도 됨 (템플릿 `Assets/WebGLTemplates/VN`, Gzip+decompressionFallback). 웹 세이브는 PlayerPrefs. 폰 대응: `VNPlatformAdjust`(폰 확대/숨김), `VNSafeArea`, 퀵메뉴 "숨기기" 버튼. **세로 화면 지원 (사용자 요청)**: 화면이 세로로 길면 `VNOrientation`(실행 중 VNEngine.Start 에서 붙음)이 세로 배치로 바꾸고 가로면 원래대로 되돌림. 씬은 가로(1920x1080) 배치 그대로, 세로 기준은 가로 900·세로 1600 이상(CanvasScaler Expand). 세로에선 퀵메뉴 맨 위 한 줄, 날짜/스탯 그 아래, 대사창 아래쪽, 캐릭터 크게, 메뉴 창 좁고 길게 + 탭은 창 아래 한 줄. 배경은 비율 유지로 꽉 채움(잘림), CG 는 잘리지 않게 가운데 띠 + 뒤에 같은 그림을 흐리게(`VNStage.SetBackdrop`). 예전 "가로로 돌려 주세요" 안내(VNRotateHint)는 삭제됨. 갤러리 CG 목록은 스크롤됨(`VNGallery.MakeScrollable`)
 
 ## GitHub · 웹 배포 메모 (PC 여러 대에서 이어 작업할 때 읽기)
 
@@ -32,6 +32,7 @@
 - 2026-10-13 01:02 웹 버전(docs/ 수동 방식) 추가 / 13:08 그리운 예은체 폰트 저장소에 추가
 - 2026-10-13 14:58 GitHub Actions 자동 빌드 도입 (첫 빌드 성공 15:10) / 15:11 빠른 저장·불러오기 버튼 제거
 - 2026-10-13 15:53~16:06 등장인물 성별 선택, 남자 스탠딩·CG, 공주님/왕자님 자동 변환 → 16:16 웹 반영
+- 2026-10-14 폰 세로 화면 지원(VNOrientation), 서연(포니테일·당근 인형)·기주(귀티 나는 아가씨) 설정 변경 + 임시 그림 다시 그림
 
 ## 게임 설정 (사용자가 정한 것 — 바꾸지 말 것)
 
@@ -43,8 +44,8 @@
   - **나**: 플레이어. 이름은 '나' 고정. 성별은 게임 시작 시 선택(변수 `성별`: 1=남, 2=여)
   - **승주**: 여주인공. **시크하고 도도한 공주님**. 차갑게 말하지만 행동은 다정함. 흑발 앞머리 없는 장단발~장발 생머리, 교복 위 블레이저(마이)
   - **승현**: 활발한 분위기 메이커. 흑발 장단발 아주 약한 펌, 앞머리
-  - **서연**: 눈치 빠른 수다쟁이. 금발 장발 아주 약한 곱슬, 앞머리, 짙은 남색 담요를 두름
-  - **기주**: 장난꾸러기, 음악 얘기엔 진지. 흑발 단발~장단발 생머리, 시스루뱅, 목에 헤드폰
+  - **서연**: 겉보기엔 도도한데 알고 보면 웃긴 반전 매력. 금발 포니테일(살짝 웨이브), 앞머리, **당근 인형**을 늘 들고 다니고 짙은 남색 담요를 두름
+  - **기주**: 부잣집 아가씨처럼 귀티 나는 외모, 성격은 장난꾸러기, 음악 얘기엔 진지. 흑발 단발~장단발 윤기 나는 생머리, 시스루뱅, 작은 진주 귀걸이, 목에 헤드폰
   - **수민**: 엉뚱한 4차원. 흑발 풀뱅 포니테일 장발, 회색 후드집업, 핸드폰을 들고 다님 (사진 좋아하는 설정은 폐기)
   - 친구 넷은 모두 여자
 - 승주를 좋아하게 된 계기: 지난 겨울 소나기 날 승주가 우산을 주고 자기는 비를 맞고 감 (프롤로그, CG `승주_우산`)
