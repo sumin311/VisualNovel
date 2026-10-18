@@ -1720,6 +1720,9 @@ public static class PlaceholderArt
         }
     }
 
+    // 진짜 그림이 들어간 캐릭터 — 스탠딩(여자·남자 모두)을 만들지 않음 (덮어쓰기 방지)
+    static readonly string[] RealStanding = { "기주" };
+
     public static void Run(string root, string filter)
     {
         string chDir = Path.Combine(root, "Assets\\Resources\\Characters"), cgDir = Path.Combine(root, "Assets\\Resources\\CG");
@@ -1727,6 +1730,7 @@ public static class PlaceholderArt
         foreach (var s in AllSpecs())
             foreach (var e in exprs)
             {
+                if (Array.IndexOf(RealStanding, s.Name) >= 0) continue;
                 string name = s.Name + "_" + e;
                 if (!string.IsNullOrEmpty(filter) && !name.Contains(filter)) continue;
                 var spec = s; var look = Standing(s, e);
@@ -1736,6 +1740,7 @@ public static class PlaceholderArt
         foreach (var s0 in AllSpecs())
             foreach (var e in exprs)
             {
+                if (Array.IndexOf(RealStanding, s0.Name) >= 0) continue; // 남자도 진짜 그림(여자 그림)을 그대로 씀
                 string name = s0.Name + "_남_" + e;
                 if (!string.IsNullOrEmpty(filter) && !name.Contains(filter)) continue;
                 Spec fresh = null; foreach (var x in AllSpecs()) if (x.Name == s0.Name) fresh = x; var spec = AsMale(fresh); var look = Standing(fresh, e);
