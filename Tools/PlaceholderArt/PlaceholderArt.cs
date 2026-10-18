@@ -1470,11 +1470,11 @@ public static class PlaceholderArt
             var a = CG("happy", "raised", "grin", "peace", true);
             var b = CG("open", "raised", "o", "phone", true); b.Sparkle = true;
             var c = CG("happy", "raised", "open", "carrot", true);
-            var dd = CG("wink", "raised", "grin", "sides", true);
+            // 기주는 친구가 그린 진짜 그림(윙크)을 맨 앞 오른쪽에
             Place(g, Find("수민"), b, 780, 160, 0.78f, true);
             Place(g, Find("서연"), c, 1160, 160, 0.78f, false);
             Place(g, Find("승현"), a, 440, 220, 0.84f, true);
-            Place(g, Find("기주"), dd, 1500, 220, 0.84f, false);
+            DrawRealArt(g, "Characters/기주_웃음.png", new Rectangle(0, 60, 1200, 1480), 1520, 230, 0.6f);
             Particles(g, 60, H("#FFE7B8"), 6);
             Caption(g, "임시 CG · 하렘_엔딩");
         };
@@ -1593,10 +1593,10 @@ public static class PlaceholderArt
                 Line(g, A(H("#9A7AE0"), 200), 4f, nx + 11, ny, nx + 11, ny - 54);
                 Line(g, A(H("#9A7AE0"), 200), 4f, nx + 11, ny - 54, nx + 30, ny - 40);
             }
-            var k = CG("open", "raised", "smile", "headphoneShare", true); k.LookX = -0.6f;
-            Place(g, Find("기주"), k, 1060, -20, 1.0f, false);
+            // 친구가 그린 진짜 기주 그림(윙크) — 남자 기주도 이 CG 를 그대로 씀
+            DrawRealArt(g, "Characters/기주_웃음.png", new Rectangle(0, 60, 1200, 1340), 1060, 20, 0.8f);
             Particles(g, 30, H("#E0B6FF"), 14);
-            Caption(g, "임시 CG · 기주_음악실");
+            // (진짜 그림이라 "임시 CG" 표시 없음)
         };
 
         d["수민_편의점"] = g =>
@@ -1722,7 +1722,7 @@ public static class PlaceholderArt
     // 진짜 그림이 들어간 캐릭터 — 스탠딩(여자·남자 모두)을 만들지 않음 (덮어쓰기 방지)
     static readonly string[] RealStanding = { "기주" };
     // 진짜 그림으로 만든 CG — 남자 버전("_남")을 따로 만들지 않음 (같은 CG 를 씀)
-    static readonly string[] RealArtCG = { "기주_엔딩" };
+    static readonly string[] RealArtCG = { "기주_엔딩", "기주_음악실" };
 
     static string projectRoot;
 
