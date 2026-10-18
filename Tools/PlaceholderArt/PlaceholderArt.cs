@@ -1447,10 +1447,9 @@ public static class PlaceholderArt
         {
             Rooftop(g, true);
             StringLights(g, -40, 100, 1960, 140, 120, 4);
-            var k = CG("open", "worried", "smile", "headphonesHold", true); k.LookX = -0.6f;
-            Place(g, Find("기주"), k, 980, -110, 1.14f, false);
+            // 친구가 그린 진짜 기주 그림(홍조)을 상반신으로 크게 배치 — 남자 기주도 이 CG 를 그대로 씀
+            DrawRealArt(g, "Characters\\기주_부끄럼.png", new Rectangle(0, 60, 1200, 1340), 980, -10, 0.86f);
             Particles(g, 50, H("#E0B6FF"), 4);
-            Caption(g, "임시 CG · 기주_엔딩");
         };
 
         d["수민_엔딩"] = g =>
@@ -1722,9 +1721,27 @@ public static class PlaceholderArt
 
     // 진짜 그림이 들어간 캐릭터 — 스탠딩(여자·남자 모두)을 만들지 않음 (덮어쓰기 방지)
     static readonly string[] RealStanding = { "기주" };
+    // 진짜 그림으로 만든 CG — 남자 버전("_남")을 따로 만들지 않음 (같은 CG 를 씀)
+    static readonly string[] RealArtCG = { "기주_엔딩" };
+
+    static string projectRoot;
+
+    /// <summary>Assets/Resources/ 아래의 진짜 그림 일부(src)를 cx 가운데·top 위치에 scale 배로 그림</summary>
+    static void DrawRealArt(Graphics g, string resPath, Rectangle src, float cx, float top, float scale)
+    {
+        using (var img = Image.FromFile(Path.Combine(projectRoot, "Assets\\Resources\\" + resPath)))
+        {
+            var old = g.InterpolationMode;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            float w = src.Width * scale, h = src.Height * scale;
+            g.DrawImage(img, new RectangleF(cx - w / 2, top, w, h), src, GraphicsUnit.Pixel);
+            g.InterpolationMode = old;
+        }
+    }
 
     public static void Run(string root, string filter)
     {
+        projectRoot = root;
         string chDir = Path.Combine(root, "Assets\\Resources\\Characters"), cgDir = Path.Combine(root, "Assets\\Resources\\CG");
         string[] exprs = { "기본", "웃음", "화남", "부끄럼" };
         foreach (var s in AllSpecs())
@@ -1754,7 +1771,7 @@ public static class PlaceholderArt
             var variants = new List<KeyValuePair<string, string[]>>();
             variants.Add(new KeyValuePair<string, string[]>(kv.Key, new string[0]));
             if (owner == "하렘") variants.Add(new KeyValuePair<string, string[]>(kv.Key + "_남", new[] { "승현", "서연", "기주", "수민" }));
-            else variants.Add(new KeyValuePair<string, string[]>(kv.Key + "_남", new[] { owner }));
+            else if (Array.IndexOf(RealArtCG, kv.Key) < 0) variants.Add(new KeyValuePair<string, string[]>(kv.Key + "_남", new[] { owner }));
             foreach (var v in variants)
             {
                 if (!string.IsNullOrEmpty(filter) && !v.Key.Contains(filter)) continue;
